@@ -1,5 +1,0 @@
-#DOUBLE INPUT TEXT RECOGNITION: REPEAT THE == ISTANCE
-while True:
-    fname = input('Enter file name (roster_data_sample.json or roster_data_small.json): ')
-    if fname == 'roster_data_sample.json' or fname == 'roster_data_small.json':
-        break
