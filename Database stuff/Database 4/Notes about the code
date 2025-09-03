@@ -1,0 +1,54 @@
+        !!INSERT OR IGNORE INTO!!
+WHAT DOES INSERT OR IGNORE INTO
+Attempts to insert a new row into the table
+If the insertion would violate a uniqueness constraint, it's silently skipped
+No error is generated when a duplicate is encountered
+Useful for ensuring data integrity while avoiding duplicate entries
+
+WHEN TO USE INSERT OR IGNORE:
+When importing data from multiple sources that might contain duplicates
+When you want to ensure unique entries without checking for existence first
+When you want to avoid writing complex error handling code
+When performance is important and you want to reduce pre-insert checks
+
+COMPARISON WITH Standard INSERT
+► Standard INSERT
+INSERT INTO Users (id, name) VALUES (1, 'John');
+-- Error if id=1 already exists -- CONSTRAINT UNIQUE or PRIMARY KEY violation
+► INSERT OR IGNORE
+INSERT OR IGNORE INTO Users (id, name) VALUES (1, 'John');
+-- No error if id=1 already exists -- Row is silently skipped
+
+PRATICAL EXAMPLE
+Let's say we have a table with a unique constraint on the email column:
+► CREATE TABLE Users ( id INTEGER PRIMARY KEY, name TEXT, email TEXT UNIQUE );
+Now let's see how INSERT OR IGNORE handles duplicate emails:
+► -- First insert succeeds
+INSERT OR IGNORE INTO Users (id, name, email) VALUES (1, 'John Doe', 'john@example.com');
+-- Second insert with same email is ignored INSERT OR IGNORE INTO Users (id, name, email) VALUES (2, 'John Smith', 'john@example.com');
+After these operations, the table will contain only the first record. The second insert is ignored because it would violate the unique constraint on the email column.
+
+LIMITATIONS:
+• SQLite-specific syntax (not standard SQL)
+• Only ignores uniqueness constraint violations
+• Other errors (like type mismatches or foreign key violations) will still cause failures
+• Doesn't provide feedback about which rows were ignored
+For more complex conflict handling, consider using INSERT ... ON CONFLICT which provides more options.
+
+
+        !!FETCHONE()[0]!!
+► cur.execute('''INSERT OR IGNORE INTO Artist (name) VALUES ( ? )''', ( artist, ) )
+This line attempts to insert a new artist into the Artist table
+
+► cur.execute('SELECT id FROM Artist WHERE name = ? ', (artist, ))
+This line queries the database to get the ID of the artist
+
+► artist_id = cur.fetchone()[0]
+This line retrieves and processes the result of the query:
+
+► cur.fetchone(): Retrieves the next row of the query result as a tuple
+► [0]: Accesses the first (and only) element of the tuple, which is the artist ID
+
+WHY THE TWO EXECUTE STATEMENTS?
+The first statement ensures the artist exists in the database (inserting them if necessary), and the second statement retrieves their ID.
+This is a common pattern when working with foreign keys - you need the ID to create relationships with other tables.
