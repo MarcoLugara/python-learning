@@ -1,0 +1,1 @@
+SELECT Album.title, Album.artist_id, Artist.id, Artist.name FROM Album JOIN Artist ON Album.artist_id=Artist.id
