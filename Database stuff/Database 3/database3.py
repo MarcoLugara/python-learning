@@ -1,7 +1,7 @@
 import json
 import sqlite3
 
-conn = sqlite3.connect('rosterdb.sqlite')
+conn = sqlite3.connect('database7.sqlite')
 cur = conn.cursor()
 
 # Do some setup

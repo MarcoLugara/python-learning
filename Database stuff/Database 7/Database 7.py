@@ -1,7 +1,7 @@
 import json
 import sqlite3
 
-conn = sqlite3.connect('rosterdb.sqlite')
+conn = sqlite3.connect('database7.sqlite')
 cur = conn.cursor()
 
 # Do some setup
@@ -27,8 +27,12 @@ CREATE TABLE Member (
 )
 ''')
 
-fname = 'roster_data_sample.json'
+while False:
+    fname1 = input('Enter file name ("roster_data.json"): ')
+    if fname1 == 'roster_data.json':
+        break
 
+fname = 'roster_data.json'
 
 #   [ "Charley", "si110", 1 ],
 #   [ "Mea", "si110", 0 ],
@@ -42,7 +46,7 @@ for entry in json_data:
     title = entry[1]
     role = entry[2]
 
-    #print((name, title))
+    #print((name, title, role))
 
     cur.execute('''INSERT OR IGNORE INTO User (name)
         VALUES ( ? )''', ( name, ) )
@@ -58,11 +62,16 @@ for entry in json_data:
         (user_id, course_id, role) VALUES ( ?, ?, ? )''',
         ( user_id, course_id, role ) )
 
-    cur.execute('''
-        SELECT User.name, Course.title, Member.role FROM Member
-                JOIN User ON User.id = Member.user_id
-                JOIN Course ON Course.id = Member.course_id
-                ORDER BY Course.title, Member.role DESC, User.name'''
-                )
+    cur.executescript('''
+    SELECT User.name,Course.title, Member.role FROM 
+    User JOIN Member JOIN Course 
+    ON User.id = Member.user_id AND Member.course_id = Course.id
+    ORDER BY User.name DESC, Course.title DESC, Member.role DESC LIMIT 2;''')
+
+    cur.executescript('''
+        SELECT 'XYZZY' || hex(User.name || Course.title || Member.role ) AS X FROM 
+        User JOIN Member JOIN Course 
+        ON User.id = Member.user_id AND Member.course_id = Course.id
+        ORDER BY X LIMIT 1;''')
 
     conn.commit()

@@ -27,7 +27,10 @@ CREATE TABLE Member (
 )
 ''')
 
-fname = 'roster_data_sample.json'
+while True:
+    fname = input('Enter file name (either "roster_data_sample.json" or "roster_data_small.json": ')
+    if fname == 'roster_data_sample.json' or fname == 'roster_data_small.json':
+        break
 
 
 #   [ "Charley", "si110", 1 ],
