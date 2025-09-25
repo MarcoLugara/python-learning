@@ -140,3 +140,4 @@ print("Data for people between 30 and 40")
 print(da3040.loc[:,'RIDAGEYR'])
 
 
+
