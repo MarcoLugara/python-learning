@@ -1,0 +1,7 @@
+print(da['DMDEDUC2x'])
+for item in da["DMDEDUC2x"]:
+    ex6_data = da[da['DMDEDUC2x'] == 'item'].copy()
+    ex6 = ex6_data.DMDHHSIZ.value_counts().reset_index()  # reset_index() converts it into a DataFrame
+    ex6.columns = ['Household size', 'Count']
+    ex6['Frequency'] = ex6['Count'] / ex6['Count'].sum()
+    print(tabulate(ex5, headers='keys', tablefmt='grid', showindex=False, floatfmt=".3f"))
