@@ -134,65 +134,49 @@ for item in education_levels:
 
 #Restrict the sample to people between 30 and 40 years of age.
 # Then calculate the median household size for women and men within each level of educational attainment.
-print("Data for people between 30 and 40")
+#print("Data for people between 30 and 40")
 #da3040 = da.query('RIDAGEYR >= 30 & RIDAGEYR <= 40')
 #print(da3040)
-print(da3040.loc[:,'RIDAGEYR'])
+#print(da3040.loc[:,'RIDAGEYR'])
 #From now on, for a few lines, we rename the variables with the appropriate string names, for visualization
 da3040["DMDEDUC2x"] = da3040["DMDEDUC2"].replace(r3)
-education_levels = sorted(da3040['DMDEDUC2x'].dropna().unique().tolist())
-genders =  sorted(da3040['RIAGENDRx'].dropna().unique().tolist())
-r2 = {1: "Female", 2: "Male"}
+r2 = {2: "Female", 1: "Male"}
 da3040["RIAGENDRx"] = da3040["RIAGENDR"].replace(r2)
-print("Household size for women and men within each level of educational attainment")
+education_levels = sorted(da3040['DMDEDUC2x'].dropna().unique().tolist())  #creates a list with the unique values RIAGENDR assumes
+genders =  sorted(da3040['RIAGENDRx'].dropna().unique().tolist())
+#print("Median household size for women and men within each level of educational attainment")
 for item in education_levels:
     for gender in genders:
-        #print("Data for", gender, "with educational level:", item)
-        #item_data = da3040[(da3040['DMDEDUC2x'] == item) & (da3040['RIAGENDRx' == gender])].copy()
-        # In these cases it's better to use .query() method
         item_data = da3040.query('DMDEDUC2x == @item and RIAGENDRx == @gender').copy()
-        ex7 = item_data.DMDHHSIZ.value_counts().reset_index()  # reset_index() converts it into a DataFrame
-        #ex7.columns = ['Household size', 'Count']
-        #print(ex7.columns)
-        #print(ex7['DMDHHSIZ'].describe)
-        median = ex7['DMDHHSIZ'].median()
-        print("The median of the household size for the gender", gender, "and education level", item, "is:", median)
+        median = item_data['DMDHHSIZ'].median()
+        #print("The median of the household size for the gender", gender, "and education level", item, "is:", median)
+#print("--------------------------------------")
+#We could do the same computation by dropping the results for refused and unknown
+#print("Data for people between 30 and 40, without marginal values (unknown and refused education levels.")
+#da3040 = da.query('RIDAGEYR >= 30 & RIDAGEYR <= 40')
+#print(da3040)
+#print(da3040.loc[:,'RIDAGEYR'])
+#da3040["DMDEDUC2x"] = da3040["DMDEDUC2"].replace(r3)
+#education_levels = sorted(da3040['DMDEDUC2x'].dropna().unique().tolist())
+#genders =  sorted(da3040['RIAGENDRx'].dropna().unique().tolist())
+#r2 = {1: "Female", 2: "Male"}
+da3040 = da3040.loc[~da3040.DMDEDUC2x.isin(['Refused', 'Unknown']),:]
+#da3040["RIAGENDRx"] = da3040["RIAGENDR"].replace(r2)
+#print("Median household size for women and men within each level of educational attainment, in this case")
+for item in education_levels:
+    for gender in genders:
+        item_data = da3040.query('DMDEDUC2x == @item and RIAGENDRx == @gender').copy()
+        median = item_data['DMDHHSIZ'].median()
+        #print("The median of the household size for the gender", gender, "and education level", item, "is:", median)
 
-# if necessary reload the nhanes csv file to avoid possible data "contamination" from previous work
-da = pd.read_csv("NHANES.csv")
-# make copy of the dataframe to protect the original
-da_mod = da.copy()
+#Alternatively, in short, removing the for double cycle
+result = da3040.groupby(["RIAGENDRx", "DMDEDUC2x"])["DMDHHSIZ"].median()
+#print(result)
 
-# relabel RIAGENDR
-rgen = {1: "Male", 2: "Female"}
-da_mod["RIAGENDRx"] = da_mod["RIAGENDR"].replace(rgen)
 
-# relabel DMDEDUC2
-redu = {1: "1) LT 9", 2: "2) 9 to 11", 3: "3) HS or GED", 4: "4) Some college or AA", 5: "5) College", 7: "7) Refused", 9: "9) Don't know"}
-da_mod["DMDEDUC2x"] = da_mod.DMDEDUC2.replace(redu)
+#The participants can be clustered into "masked variance units" (MVU) based on every combination of the variables
+# SDMVSTRA and SDMVPSU. Calculate the mean age (RIDAGEYR), height (BMXHT), and BMI (BMXBMI) for each
+# gender (RIAGENDR), within each MVU, and report the ratio between the largest and smallest mean (e.g. for height) across the MVUs.
 
-# drop the variables that we don't need
-da_mod = da_mod[["RIAGENDRx", "RIDAGEYR", "DMDEDUC2x", "DMDHHSIZ"]]
-# create a closed interval range from 30 to 40
-binrange = pd.interval_range(start=30, end=40, periods=1, closed='both')
-
-# create the 30-40 'bin' variable
-da_mod["agegrp"] = pd.cut(da_mod.RIDAGEYR, binrange)
-
-# what does DMDEDUC2x look like?
-#print(da_mod.DMDEDUC2x.value_counts())
-
-# drop rare or missing values
-da_mod = da_mod.loc[~da_mod.DMDEDUC2x.isin(["7) Refused", "9) Don't know"]), :]
-
-# median by RIAGENDRx and DMDEDUC2x
-dx = da_mod.groupby(["agegrp", "RIAGENDRx", "DMDEDUC2x"])["DMDHHSIZ"].median()
-print(dx)
-
-# another way to isolate subjects between 30 and 40 years old
-#da3040 = da_mod.query('RIDAGEYR >= 30 & RIDAGEYR <= 40').copy()
-
-# median by RIAGENDRx and DMDEDUC2x
-#print(da3040.groupby(["RIAGENDRx", "DMDEDUC2x"])["DMDHHSIZ"].median())
 
 
