@@ -177,6 +177,93 @@ result = da3040.groupby(["RIAGENDRx", "DMDEDUC2x"])["DMDHHSIZ"].median()
 #The participants can be clustered into "masked variance units" (MVU) based on every combination of the variables
 # SDMVSTRA and SDMVPSU. Calculate the mean age (RIDAGEYR), height (BMXHT), and BMI (BMXBMI) for each
 # gender (RIAGENDR), within each MVU, and report the ratio between the largest and smallest mean (e.g. for height) across the MVUs.
+#I want to make groups between each combination of the MVU
+#print(da['SDMVSTRA'].describe)
+#print(da['SDMVSTRA'].value_counts())
+age_mean = da.groupby(["SDMVSTRA", "SDMVPSU"])["RIDAGEYR"].mean()
+height_mean = da.groupby(["SDMVSTRA", "SDMVPSU"])["BMXHT"].mean()
+BMI_mean = da.groupby(["SDMVSTRA", "SDMVPSU"])["BMXBMI"].mean()
+#print("age mean: \n", age_mean, "\n," "height mean: \n ",  height_mean, "\n", "BMI mean: \n ",BMI_mean)
+MVU1_values_list = sorted(da['SDMVSTRA'].dropna().unique().tolist())  #creates a list with the unique values RIAGENDR assumes
+MVU2_values_list =  sorted(da['SDMVPSU'].dropna().unique().tolist())
+#print(MVU2_values_list, MVU1_values_list)
+three_items = ["RIDAGEYR", "BMXHT", "BMXBMI"]
+for variable in three_items:
+    lowest = float('inf') #infinty
+    highest = float('-inf')
+    #print("We now search the smallest and highest mean for", variable)
+    for value1 in MVU1_values_list:
+        for value2 in MVU2_values_list:
+            data_pool = da.query('SDMVSTRA == @value1 and SDMVPSU == @value2').copy()
+            mean = data_pool[variable].mean()
+            if mean < lowest:
+                lowest = mean
+                rounded_lowest = round(lowest, 3)
+            if mean > highest: #not elif because i may exit the loop for good, using the first if, if they are in order
+                highest = mean
+                rounded_highest = round(highest, 3)
+            #print("The highest and lowest means in", variable, "in the section SDMVSTRA =",
+                  #value1, "and SDMVPSU =", value2, "are:", highest, lowest)
 
+print(da['RIAGENDRx'])
+#Calculate the inter-quartile range (IQR) for age, height, and BMI for each gender and each MVU.
+# Report the ratio between the largest and smalles IQR across the MVUs.
+#We basically need to do the same but with the interquartile range
+print("Females case")
+daF = da.query('RIAGENDRx == Female').copy()
+age_IQR = daF.groupby(["SDMVSTRA", "SDMVPSU"])["RIDAGEYR"].quantile(0.75) - da.groupby(["SDMVSTRA", "SDMVPSU"])["RIDAGEYR"].quantile(0.25)
+height_IQR = daF.groupby(["SDMVSTRA", "SDMVPSU"])["BMXHT"].quantile(0.75) - da.groupby(["SDMVSTRA", "SDMVPSU"])["BMXHT"].quantile(0.25)
+BMI_IQR = daF.groupby(["SDMVSTRA", "SDMVPSU"])["BMXBMI"].quantile(0.75) - da.groupby(["SDMVSTRA", "SDMVPSU"])["BMXBMI"].quantile(0.25)
+print("age IQR: \n", age_IQR, "\n," "height IQR: \n ",  height_IQR, "\n", "BMI IQR: \n ", BMI_IQR)
 
+print("Male case")
+daM = data_pool = da.query('RIAGENDRx == Male').copy()
+age_IQR = daM.groupby(["SDMVSTRA", "SDMVPSU"])["RIDAGEYR"].quantile(0.75) - da.groupby(["SDMVSTRA", "SDMVPSU"])["RIDAGEYR"].quantile(0.25)
+height_IQR = daM.groupby(["SDMVSTRA", "SDMVPSU"])["BMXHT"].quantile(0.75) - da.groupby(["SDMVSTRA", "SDMVPSU"])["BMXHT"].quantile(0.25)
+BMI_IQR = daM.groupby(["SDMVSTRA", "SDMVPSU"])["BMXBMI"].quantile(0.75) - da.groupby(["SDMVSTRA", "SDMVPSU"])["BMXBMI"].quantile(0.25)
+print("age IQR: \n", age_IQR, "\n," "height IQR: \n ",  height_IQR, "\n", "BMI IQR: \n ", BMI_IQR)
 
+print("Females case")
+daF = da.query('RIAGENDRx == Female').copy()
+MVU1_values_list = sorted(daF['SDMVSTRA'].dropna().unique().tolist())  #creates a list with the unique values RIAGENDR assumes
+MVU2_values_list =  sorted(daF['SDMVPSU'].dropna().unique().tolist())
+#print(MVU2_values_list, MVU1_values_list)
+three_items = ["RIDAGEYR", "BMXHT", "BMXBMI"]
+for variable in three_items:
+    lowest = float('inf') #infinty
+    highest = float('-inf')
+    #print("We now search the smallest and highest mean for", variable)
+    for value1 in MVU1_values_list:
+        for value2 in MVU2_values_list:
+            data_pool = da.query('SDMVSTRA == @value1 and SDMVPSU == @value2').copy()
+            IQR = data_pool[variable].quantile(0.75) - data_pool[variable].quantile(0.25)
+            if IQR < lowest:
+                lowest = IQR
+            rounded_lowest = np.round(lowest, 3)
+            if IQR > highest: #not elif because i may exit the loop for good, using the first if, if they are in order
+                highest = IQR
+            rounded_highest = np.round(highest, 3)
+            print("The highest and lowest IQR in", variable, "in the section SDMVSTRA =",
+                  value1, "and SDMVPSU =", value2, "are:", rounded_highest, rounded_lowest)
+
+daM = data_pool = da.query('RIAGENDRx == Male').copy()
+MVU1_values_list = sorted(daM['SDMVSTRA'].dropna().unique().tolist())  #creates a list with the unique values RIAGENDR assumes
+MVU2_values_list =  sorted(daM['SDMVPSU'].dropna().unique().tolist())
+#print(MVU2_values_list, MVU1_values_list)
+three_items = ["RIDAGEYR", "BMXHT", "BMXBMI"]
+for variable in three_items:
+    lowest = float('inf') #infinty
+    highest = float('-inf')
+    #print("We now search the smallest and highest mean for", variable)
+    for value1 in MVU1_values_list:
+        for value2 in MVU2_values_list:
+            data_pool = da.query('SDMVSTRA == @value1 and SDMVPSU == @value2').copy()
+            IQR = data_pool[variable].quantile(0.75) - data_pool[variable].quantile(0.25)
+            if IQR < lowest:
+                lowest = IQR
+            rounded_lowest = np.round(lowest, 3)
+            if IQR > highest: #not elif because i may exit the loop for good, using the first if, if they are in order
+                highest = IQR
+            rounded_highest = np.round(highest, 3)
+            print("The highest and lowest IQR in", variable, "in the section SDMVSTRA =",
+                  value1, "and SDMVPSU =", value2, "are:", rounded_highest, rounded_lowest)
