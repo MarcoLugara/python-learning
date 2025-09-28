@@ -205,7 +205,7 @@ for variable in three_items:
             #print("The highest and lowest means in", variable, "in the section SDMVSTRA =",
                   #value1, "and SDMVPSU =", value2, "are:", highest, lowest)
 
-print(da['RIAGENDRx'])
+
 #Calculate the inter-quartile range (IQR) for age, height, and BMI for each gender and each MVU.
 # Report the ratio between the largest and smalles IQR across the MVUs (between all of them, just section by gender).
 #We basically need to do the same but with the interquartile range
@@ -235,7 +235,7 @@ for variable in three_items:
     #print("We now search the smallest and highest mean for", variable)
     for value1 in MVU1_values_list:
         for value2 in MVU2_values_list:
-            data_pool = da.query('SDMVSTRA == @value1 and SDMVPSU == @value2').copy()
+            data_pool = daF.query('SDMVSTRA == @value1 and SDMVPSU == @value2').copy()
             IQR = data_pool[variable].quantile(0.75) - data_pool[variable].quantile(0.25)
             if IQR < lowest:
                 lowest = IQR
@@ -243,7 +243,9 @@ for variable in three_items:
                 highest = IQR
     rounded_lowest = np.round(lowest, 3)
     rounded_highest = np.round(highest, 3)
-    print("The highest and lowest IQR in", variable, "for Females are:", rounded_highest, rounded_lowest)
+    ratioHighLow = rounded_highest/rounded_lowest
+    rounded_ratio = np.round(ratioHighLow, 3)
+    print("The ratio between the highest and lowest IQR in", variable, "for Females is:", rounded_ratio)
 
 print("Males case")
 #daM = data_pool = da.query('RIAGENDRx == "Male"').copy()
@@ -257,7 +259,7 @@ for variable in three_items:
     #print("We now search the smallest and highest mean for", variable)
     for value1 in MVU1_values_list:
         for value2 in MVU2_values_list:
-            data_pool = da.query('SDMVSTRA == @value1 and SDMVPSU == @value2').copy()
+            data_pool = daM.query('SDMVSTRA == @value1 and SDMVPSU == @value2').copy()
             IQR = data_pool[variable].quantile(0.75) - data_pool[variable].quantile(0.25)
             if IQR < lowest:
                 lowest = IQR
@@ -265,45 +267,6 @@ for variable in three_items:
                 highest = IQR
     rounded_lowest = np.round(lowest, 3)
     rounded_highest = np.round(highest, 3)
-    print("The highest and lowest IQR in", variable, " for Males are:", rounded_highest, rounded_lowest)
-
-da_q3 = daM.groupby(['SDMVPSU', 'SDMVSTRA']).quantile(.75, numeric_only=True)
-da_q1 = daM.groupby(['SDMVPSU', 'SDMVSTRA']).quantile(.25, numeric_only=True)
-
-# calculate the IQR for RIDAGEYR, BMXHT and BMXBMI
-da_iqr = da_q3 - da_q1
-
-# calculate and print the BMXHT iqr ratio
-ratio_height_iqr = da_iqr['BMXHT'].max()/da_iqr['BMXHT'].min()
-print("Males")
-print(round(ratio_height_iqr, 3), " (Height)")
-
-# calculate and print the RIDAGEYR iqr ratio
-ratio_age_iqr = da_iqr['RIDAGEYR'].max()/da_iqr['RIDAGEYR'].min()
-print(round(ratio_age_iqr, 3), " (Age)")
-
-# calculate and print the BMXBMI iqr ratio
-ratio_bmi_iqr = da_iqr['BMXBMI'].max()/da_iqr['BMXBMI'].min()
-print(round(ratio_bmi_iqr, 3), " (BMI)")
-
-# Females
-
-# calculate the 2nd and 3rd quintiles for RIDAGEYR, BMXHT and BMXBMI across MVUs
-da_q3 = daF.groupby(['SDMVPSU', 'SDMVSTRA']).quantile(.75, numeric_only=True)
-da_q1 = daF.groupby(['SDMVPSU', 'SDMVSTRA']).quantile(.25, numeric_only=True)
-
-# calculate the IQR for RIDAGEYR, BMXHT and BMXBMI
-da_iqr = da_q3 - da_q1
-
-# calculate and print the BMXHT iqr ratio
-ratio_height_iqr = da_iqr['BMXHT'].max()/da_iqr['BMXHT'].min()
-print("\nFemales")
-print(round(ratio_height_iqr, 3), " (Height)")
-
-# calculate and print the RIDAGEYR iqr ratio
-ratio_age_iqr = da_iqr['RIDAGEYR'].max()/da_iqr['RIDAGEYR'].min()
-print(round(ratio_age_iqr, 3), " (Age)")
-
-# calculate and print the BMXBMI iqr ratio
-ratio_bmi_iqr = da_iqr['BMXBMI'].max()/da_iqr['BMXBMI'].min()
-print(round(ratio_bmi_iqr, 3), " (BMI)")
+    ratioHighLow = rounded_highest / rounded_lowest
+    rounded_ratio = np.round(ratioHighLow, 3)
+    print("The ratio between the highest and lowest IQR in", variable, "for Males is:", rounded_ratio)
