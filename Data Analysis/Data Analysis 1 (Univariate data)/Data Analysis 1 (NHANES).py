@@ -5,7 +5,7 @@ import statsmodels.api as sm
 import numpy as np
 from tabulate import tabulate
 
-da = pd.read_csv("NHANES.csv")
+da = pd.read_csv("../Data Analysis 2 (Multivariate data)/NHANES.csv")
 #print(da)
 #print(da.columns)
 
