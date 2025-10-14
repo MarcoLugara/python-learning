@@ -37,11 +37,17 @@ def reshape_database(df1):
      name_list = df['Name'].tolist()
      print(f"Total entries: {len(name_list)}") --> Total entries: 291
     """
-    print(df.columns)
+    #print(df.columns)
     return df
 
-path = "DATASET.csv"
+path = "Database ufficiale.csv"
 df1 = pd.read_csv(path)
 
 #Reshaping the database with GRI, ESRS, SASB and widening the columns of the previous indexes into the three years
+    #and creating a new cleaner csv
 df = reshape_database(df1)
+df.to_csv('Tidier_Dataset.csv', index=False)
+df.to_excel('Tidier_Dataset.xlsx', index=False)
+
+#We now create some pie charts of the possible states of the three single indexes in each year
+
