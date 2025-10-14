@@ -21,6 +21,8 @@ def reshape_database(df1):
         columns='Anno',           # Years become columns
         values=['GRI', 'ESRS', 'SASB']  # These become values per year
     ).reset_index()
+    #print(df.columns) this would, for now, print them as tuples of variable and
+    # year to recognize where is what, so it's best to look at it and rename it to make it more clean
 
     # Flatten the column names
     df.columns = ['Name', 'ATECO', 'ATECOx', 'GRI_2022', 'GRI_2023', 'GRI_2024',
@@ -35,6 +37,7 @@ def reshape_database(df1):
      name_list = df['Name'].tolist()
      print(f"Total entries: {len(name_list)}") --> Total entries: 291
     """
+    print(df.columns)
     return df
 
 path = "DATASET.csv"
