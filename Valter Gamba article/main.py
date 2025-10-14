@@ -68,8 +68,8 @@ def pie_chart_per_year_per_standard_index(df):
             axes[i, j].set_title(f'{standard} {year}', fontweight='bold')
 
     plt.tight_layout()  # Prevents overlapping
-    plt.show()
     plt.savefig('INSERIRE TITOLO ADEGUATO (2022-2024).png')
+    #plt.show()
 
 path = "Database ufficiale.csv"
 df1 = pd.read_csv(path)
@@ -81,4 +81,5 @@ df = reshape_database(df1)
 df.to_csv('Tidier_Dataset.csv', index=False)
 df.to_excel('Tidier_Dataset.xlsx', index=False)
 
+#Creating a table of piechart with the Usage or not of each index
 pie_chart_per_year_per_standard_index(df)
