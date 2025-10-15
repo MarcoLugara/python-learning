@@ -5,6 +5,8 @@ import scipy.stats as stats
 #matplotlib inline
 import matplotlib.pyplot as plt
 
+#OUTDATED/EXECUTED PROCESSES
+#Reshaping of the DF
 def reshape_database(df1):
     """
     Complete database reshaping including column renaming and pivot transformation
@@ -40,6 +42,7 @@ def reshape_database(df1):
     #print(df.columns)
     return df
 
+#3x3 table of piecharts for each distribution
 def pie_chart_per_year_per_standard_index(df):
     # Create a 3x3 (3 years × 3 standards)  grid of subplots (piecharts)
     pieplots, axes = plt.subplots(3, 3, figsize=(13, 9))
@@ -71,15 +74,60 @@ def pie_chart_per_year_per_standard_index(df):
     plt.savefig('INSERIRE TITOLO ADEGUATO (2022-2024).png')
     #plt.show()
 
-path = "Database ufficiale.csv"
-df1 = pd.read_csv(path)
+#Check of all 0s and all 1s and check of who did ESRS or SASB in 2024
+def counts_and_percentages_and_law_check(df):
+    # Computation of counts and percentages of the Industries with all 0s and 1s for each category throughout the 3 years
+    #   and the computation of counts and percentage of Industries which presented either the SASB or the ESRS declaration in 2024
+    standards = ['GRI', 'ESRS', 'SASB']
+    for standard in standards:
+        all0 = ((df[f'{standard}_2022'] == 0) & (df[f'{standard}_2023'] == 0) & (df[f'{standard}_2024'] == 0)).sum()
+        all0_perc = round(all0 / len(df['Name']) * 100, 2)
+        print(f'The number of industries which presented no {standard} istances between 2022 and 2024 are', all0,
+              "namely", all0_perc, "%")
 
-#Reshaping the database with GRI, ESRS, SASB and widening the columns of the previous indexes into the three years
-    #and creating a new cleaner csv
-df = reshape_database(df1)
+        all1 = ((df[f'{standard}_2022'] == 1) & (df[f'{standard}_2023'] == 1) & (df[f'{standard}_2024'] == 1)).sum()
+        all1_perc = round(all1 / len(df['Name']) * 100, 2)
+        print(f'The number of industries which presented all {standard} istances between 2022 and 2024 are', all1,
+              "namely", all1_perc, "%")
+        print(
+            "This means that there are industries which haven't been consistent throughout the years, related to the pie chart")
 
-df.to_csv('Tidier_Dataset.csv', index=False)
-df.to_excel('Tidier_Dataset.xlsx', index=False)
+    some_1s_by_law_in_2024 = ((df[f'{standards[1]}_2024'] == 1) | (df[f'{standards[2]}_2023'] == 1)).sum()
+    some_1s_by_law_in_2024_perc = round(some_1s_by_law_in_2024 / len(df['Name']) * 100, 2)
+    print("The number of industries which presented either the ESRS or the SASB instance in 2024 are",
+          some_1s_by_law_in_2024, "namely", some_1s_by_law_in_2024_perc, "%")
 
-#Creating a table of piechart with the Usage or not of each index
-pie_chart_per_year_per_standard_index(df)
+#######################################
+
+path = "Tidier_Dataset.csv"
+#df1 = pd.read_csv(path)         Old naming for DF processing
+df = pd.read_csv(path)
+
+#OUTDATED/EXECUTED PROCESSES
+    #Reshaping the database with GRI, ESRS, SASB and widening the columns of the previous indexes into the three years
+    #   and creating a new cleaner csv and generating in csv and excel version
+#df = reshape_database(df1)
+#df.to_csv('Tidier_Dataset.csv', index=False)
+#df.to_excel('Tidier_Dataset.xlsx', index=False)
+
+    #Creating a table of piechart with the Usage or not of each index
+#pie_chart_per_year_per_standard_index(df)
+
+    #Computation of counts and percentages of the Industries with all 0s and 1s for each category throughout the 3 years
+    #   and the computation of counts and percentage of Industries which presented either the SASB or the ESRS declaration in 2024
+#counts_and_percentages_and_law_check(df)
+
+# Creating the columns of the standards per year more effeciently
+count = 0
+standards = ['GRI', 'ESRS', 'SASB']
+years = [2022, 2023, 2024]
+
+
+
+
+"""
+for standard in standards:
+    for year in years:
+        df_column_name = f'{standard}_{year}'
+    f'{standard}' = (df[df_column_name] == 0 ).sum()
+"""
