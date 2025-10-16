@@ -2,44 +2,78 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import scipy.stats as stats
-#matplotlib inline
 import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
+
 
 #OUTDATED/EXECUTED PROCESSES
 #Reshaping of the DF
 def reshape_database(df1):
     """
-    Complete database reshaping including column renaming and pivot transformation
+    Complete database reshaping using a manual approach
     """
-    #Rename columns for readability
-    df2 = df1.rename(columns={'AZIENDE SUDDIVISE PER CODICE ATECO': 'Name', 'ATECO 2007\ncodice': 'ATECO', 'ATECO 2007\ndescrizione': 'ATECOx'})
+    # Rename columns for readability
+    df2 = df1.rename(columns={
+        'AZIENDE SUDDIVISE PER CODICE ATECO': 'Name',
+        'ATECO 2007\ncodice': 'ATECO',
+        'ATECO 2007\ndescrizione': 'ATECOx'}
+    )
 
-    #Reshape the database to just have the 3 Boolean variables to analyze, namely GRI, ESRS, SASB
-    df3= df2[['Name', 'Anno', 'ATECO', 'ATECOx', 'GRI', 'ESRS', 'SASB']]
+    # Get unique companies
+    companies = df2['Name'].unique()
 
-    # Create a wide format with years as columns
-    df = df3.pivot_table(
-        index=['Name', 'ATECO', 'ATECOx'],  # Keep these as rows
-        columns='Anno',           # Years become columns
-        values=['GRI', 'ESRS', 'SASB']  # These become values per year
-    ).reset_index()
-    #print(df.columns) this would, for now, print them as tuples of variable and
-    # year to recognize where is what, so it's best to look at it and rename it to make it more clean
+    # Create empty result DataFrame
+    result_data = []
 
-    # Flatten the column names
-    df.columns = ['Name', 'ATECO', 'ATECOx', 'GRI_2022', 'GRI_2023', 'GRI_2024',
-                       'ESRS_2022', 'ESRS_2023', 'ESRS_2024',
-                       'SASB_2022', 'SASB_2023', 'SASB_2024']
+    for company in companies:
+        company_data = df2[df2['Name'] == company]
+
+        # Get base info
+        base_info = company_data.iloc[0][['Name', 'ATECO', 'ATECOx']]
+        row_data = {
+            'Name': base_info['Name'],
+            'ATECO': base_info['ATECO'],
+            'ATECOx': base_info['ATECOx']
+        }
+
+        # Add GRI, ESRS, SASB for each year
+        for year in [2022, 2023, 2024]:
+            year_data = company_data[company_data['Anno'] == year]
+            if not year_data.empty:
+                row_data[f'GRI_{year}'] = year_data['GRI'].iloc[0]
+                row_data[f'ESRS_{year}'] = year_data['ESRS'].iloc[0]
+                row_data[f'SASB_{year}'] = year_data['SASB'].iloc[0]
+            else:
+                row_data[f'GRI_{year}'] = 0
+                row_data[f'ESRS_{year}'] = 0
+                row_data[f'SASB_{year}'] = 0
+
+        result_data.append(row_data)
+
+    df = pd.DataFrame(result_data)
+
+    # Handle missing values and data types
+    df = df.replace('#N/A', np.nan)
+
+    # Convert all indicator columns to integers
+    indicator_cols = [col for col in df.columns if col.startswith(('GRI_', 'ESRS_', 'SASB_'))]
+    for col in indicator_cols:
+        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
+
+    # Convert ATECO to appropriate type if needed
+    df['ATECO'] = pd.to_numeric(df['ATECO'], errors='coerce')
+
+    # Delete the last useless row
+    df = df.drop(df.index[-1])
 
     """
     print(f"Original shape: {df3.shape}")  --> Original shape: (876, 7)
     print(f"Wide shape: {df.shape}") --> Wide shape: (291, 12) 291 companies analyzed
-
      Checks:
      name_list = df['Name'].tolist()
      print(f"Total entries: {len(name_list)}") --> Total entries: 291
-    """
     #print(df.columns)
+    """
     return df
 
 #3x3 table of piecharts for each distribution
@@ -97,37 +131,255 @@ def counts_and_percentages_and_law_check(df):
     print("The number of industries which presented either the ESRS or the SASB instance in 2024 are",
           some_1s_by_law_in_2024, "namely", some_1s_by_law_in_2024_perc, "%")
 
+def adding_new_Ateco_identifiers(df_Extra, df):
+    df_Extra = pd.read_csv('ATECO_codes.csv')
+    df_Extra = df_Extra.rename(columns={
+        'Codice Ateco': 'Codice',
+        'Titolo Ateco 2007 aggiornamento 2022': 'Codice_desc'}
+    )
+    df_Extra = df_Extra[['Codice', 'Codice_desc']]
+
+    """
+    Basic Syntax for INDEXROW()
+    for index, row in dataframe.iterrows():
+        # index: the row index
+        # row: a Series containing the row data
+        # access row data using row['column_name']
+    """
+    # Getting the values from the ISTAT database related to the general ateco codes
+    ateco = list()
+    atecoX = list()
+    for index, row in df_Extra.iterrows():
+        if len(row['Codice']) == 2:
+            ateco.append(row['Codice'])
+            atecoX.append(row['Codice_desc'])
+    # print(ateco)
+    # print(atecoX)
+
+    # Create mapping dictionary, which maps each n-th value in the first list to the n-th value in the second list
+    mapping_dict = dict(zip(ateco, atecoX))
+
+    """ ZIP FUNCTION
+    The zip(iterable1, iterable2, iterable3, ...) function takes multiple iterables (lists, tuples, etc.) and returns an iterator of tuples where:
+    The i-th tuple contains the i-th element from each of the input iterables
+    It stops when the shortest input iterable is exhausted
+    It's a perfect match if the length of all iterable1, iterable2, etc... is the same
+    """
+
+    # Creating the new 2 columns which have the first 2 characters of ATECO and the related descirption from the ISTAT DF
+    df['Ateco'] = df['ATECO'].astype(str).str[:2]  # .str[:2] takes up to the 2nd character in the string
+    df['AtecoX'] = df['Ateco'].map(mapping_dict)
+
+    #Putting the new 2 columns before the ATECO ones
+    new_cols = df[['Ateco', 'AtecoX']]
+    df = df.drop(df.columns[12:], axis=1)  # cols.remove(thing) works only for one element, for a list. Drop works best for DF for rows and columns. SAY THE AXIS
+    #print(df.columns)
+    df = pd.concat([df.iloc[:, :1], new_cols, df.iloc[:, 1:]], axis=1)  # axis=0 concatenates rows, axis=1 concatenates columns
+    #print(df.columns)
+
+    # Updating the csv and excel
+    df.to_csv('Tidier_Dataset.csv', index=False)
+    df.to_excel('Tidier_Dataset.xlsx', index=False)
+    # print(df.columns)
+
+    # Sorting the DF list by Ateco code, in case it's needed somewhere
+    df_sorted_by_Ateco = df.sort_values(['Ateco', 'ATECO'])
+            #This will sort first by Ateco and then ONLY WHEN MATCHING, by ATECO
+    return df, df_sorted_by_Ateco
+
+def figure1(df):
+    # Load and process the dataset
+    data = df
+    framework_columns = ['GRI_2022', 'ESRS_2022', 'SASB_2022', 'GRI_2023', 'ESRS_2023', 'SASB_2023', 'GRI_2024',
+                         'ESRS_2024', 'SASB_2024']
+    data['Total_Adoption'] = data[framework_columns].sum(axis=1)
+    zero_adoption = data[data['Total_Adoption'] == 0].copy()
+
+    # Extract 2-digit ATECO codes and count occurrences
+    zero_adoption['Ateco_2digit'] = zero_adoption['Ateco'].str[:2].fillna('na')
+    ateco_counts = zero_adoption['Ateco_2digit'].value_counts().sort_index()
+
+    # ATECOX descriptions for legend (unique 2-digit codes)
+    ateco_descriptions = data[['Ateco', 'AtecoX']].drop_duplicates().set_index('Ateco')['AtecoX'].to_dict()
+    ateco_labels = {code: ateco_descriptions.get(code, 'Not Available') for code in ateco_counts.index}
+
+    # Create figure with a cool background
+    plt.figure(figsize=(12, 6), facecolor='#f0f8ff')
+    ax = plt.gca()
+    ax.set_facecolor('#e6f0fa')
+
+    # Bar plot with reversed gradient colors (red for high, green for low)
+    x = np.arange(len(ateco_counts))
+    # Normalize counts for color scaling (reversed: high = red, low = green)
+    norm_counts = ateco_counts.values / ateco_counts.max()
+    colors = plt.cm.RdYlGn_r(norm_counts)  # Reversed RdYlGn colormap
+
+    bars = plt.bar(x, ateco_counts.values, color=colors, edgecolor='white', linewidth=0.5)
+
+    # Customize the plot
+    plt.xlabel('2-Digit ATECO Codes', fontsize=12, fontweight='bold')
+    plt.ylabel('Number of Companies with No Adoption', fontsize=12, fontweight='bold')
+    plt.title('Distribution of Companies with No Framework Adoption\nby 2-Digit ATECO Code (2022-2024)',
+              fontsize=14, fontweight='bold', pad=15, color='#2c3e50')
+    plt.xticks(x, ateco_counts.index, fontsize=10, rotation=0)
+    plt.yticks(fontsize=10)
+
+    # Add value labels on bars
+    for bar in bars:
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width() / 2., height,
+                f'{int(height)}', ha='center', va='bottom', fontsize=10, color='black')
+
+    # Add a subtle grid and fancy border
+    plt.grid(True, which='both', linestyle='--', alpha=0.3, linewidth=0.5)
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    ax.set_axisbelow(True)
+
+    # Adjust layout
+    plt.tight_layout()
+    # Show and save the plot
+    #plt.show()
+    plt.savefig('fig1.png')
+
+def figure2(df):
+    # Load and process the dataset
+    data = df.copy()
+
+    # Create adoption categories for 2024
+    data['ESRS_only'] = ((data['ESRS_2024'] == 1) & (data['SASB_2024'] == 0)).astype(int)
+    data['SASB_only'] = ((data['SASB_2024'] == 1) & (data['ESRS_2024'] == 0)).astype(int)
+    data['Both'] = ((data['ESRS_2024'] == 1) & (data['SASB_2024'] == 1)).astype(int)
+
+    # Filter companies that have at least one of the frameworks
+    esrs_sasb_adopters = data[(data['ESRS_2024'] == 1) | (data['SASB_2024'] == 1)].copy()
+
+    # Extract 2-digit ATECO codes
+    esrs_sasb_adopters['Ateco_2digit'] = esrs_sasb_adopters['Ateco'].str[:2].fillna('na')
+
+    # Group by ATECO code and count adoption types
+    ateco_adoption = esrs_sasb_adopters.groupby('Ateco_2digit').agg({
+        'ESRS_only': 'sum',
+        'SASB_only': 'sum',
+        'Both': 'sum'
+    }).fillna(0)
+
+    # Calculate total adopters per ATECO code
+    ateco_adoption['Total'] = ateco_adoption.sum(axis=1)
+    ateco_adoption = ateco_adoption.sort_values('Total', ascending=False)
+
+    # Get ATECO descriptions for legend
+    ateco_descriptions = data[['Ateco', 'AtecoX']].drop_duplicates().set_index('Ateco')['AtecoX'].to_dict()
+    ateco_labels = {code: ateco_descriptions.get(code, 'Not Available') for code in ateco_adoption.index}
+
+    # Create figure
+    plt.figure(figsize=(14, 8), facecolor='#f0f8ff')
+    ax = plt.gca()
+    ax.set_facecolor('#e6f0fa')
+
+    # Create stacked bar plot
+    x = np.arange(len(ateco_adoption))
+    bottom = np.zeros(len(ateco_adoption))
+
+    # Define colors for each category
+    colors = ['#2E86AB', '#A23B72', '#F18F01']  # ESRS_only, SASB_only, Both
+
+    bars1 = plt.bar(x, ateco_adoption['ESRS_only'], color=colors[0],
+                    edgecolor='white', linewidth=0.5, label='ESRS Only')
+    bottom += ateco_adoption['ESRS_only']
+
+    bars2 = plt.bar(x, ateco_adoption['SASB_only'], bottom=bottom, color=colors[1],
+                    edgecolor='white', linewidth=0.5, label='SASB Only')
+    bottom += ateco_adoption['SASB_only']
+
+    bars3 = plt.bar(x, ateco_adoption['Both'], bottom=bottom, color=colors[2],
+                    edgecolor='white', linewidth=0.5, label='Both Frameworks')
+
+    # Customize the plot
+    plt.xlabel('2-Digit ATECO Codes', fontsize=12, fontweight='bold')
+    plt.ylabel('Number of Companies', fontsize=12, fontweight='bold')
+    plt.title('Distribution of ESRS 2024 and SASB 2024 Framework Adoption\nby 2-Digit ATECO Code',
+              fontsize=14, fontweight='bold', pad=15, color='#2c3e50')
+    plt.xticks(x, ateco_adoption.index, fontsize=10, rotation=45, ha='right')
+    plt.yticks(fontsize=10)
+
+    # Add value labels on bars (total per ATECO code)
+    for i, (idx, row) in enumerate(ateco_adoption.iterrows()):
+        total = row['Total']
+        if total > 0:
+            ax.text(i, total + 0.1, f'{int(total)}', ha='center', va='bottom',
+                    fontsize=9, fontweight='bold', color='#2c3e50')
+
+    # Add legend
+    plt.legend(title='Adoption Type', title_fontsize=10, fontsize=9,
+               loc='upper right', framealpha=0.9)
+
+    # Add a subtle grid and fancy border
+    plt.grid(True, which='both', linestyle='--', alpha=0.3, linewidth=0.5, axis='y')
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    ax.set_axisbelow(True)
+
+    # Adjust layout
+    plt.tight_layout()
+
+    # Print some statistics
+    total_esrs_only = esrs_sasb_adopters['ESRS_only'].sum()
+    total_sasb_only = esrs_sasb_adopters['SASB_only'].sum()
+    total_both = esrs_sasb_adopters['Both'].sum()
+    total_adopters = len(esrs_sasb_adopters)
+
+    print(f"Adoption Statistics (2024):")
+    print(f"Total companies with ESRS or SASB: {total_adopters}")
+    print(f"ESRS only: {total_esrs_only} ({total_esrs_only / total_adopters * 100:.1f}%)")
+    print(f"SASB only: {total_sasb_only} ({total_sasb_only / total_adopters * 100:.1f}%)")
+    print(f"Both frameworks: {total_both} ({total_both / total_adopters * 100:.1f}%)")
+
+    # Show and save the plot
+    plt.savefig('fig2.png', dpi=300, bbox_inches='tight')
+    plt.show()
+
 #######################################
 
-path = "Tidier_Dataset.csv"
-#df1 = pd.read_csv(path)         Old naming for DF processing
-df = pd.read_csv(path)
-
+"""
 #OUTDATED/EXECUTED PROCESSES
-    #Reshaping the database with GRI, ESRS, SASB and widening the columns of the previous indexes into the three years
-    #   and creating a new cleaner csv and generating in csv and excel version
-#df = reshape_database(df1)
-#df.to_csv('Tidier_Dataset.csv', index=False)
-#df.to_excel('Tidier_Dataset.xlsx', index=False)
-
-    #Creating a table of piechart with the Usage or not of each index
-#pie_chart_per_year_per_standard_index(df)
-
-    #Computation of counts and percentages of the Industries with all 0s and 1s for each category throughout the 3 years
-    #   and the computation of counts and percentage of Industries which presented either the SASB or the ESRS declaration in 2024
-#counts_and_percentages_and_law_check(df)
-
-# Creating the columns of the standards per year more effeciently
-count = 0
-standards = ['GRI', 'ESRS', 'SASB']
-years = [2022, 2023, 2024]
+path1 = "Database Ufficiale.csv"       #Old naming for DF processing
+df1= pd.read_csv(path1)
 
 
+Reshaping the database with GRI, ESRS, SASB and widening the columns of the previous indexes into the three years
+and creating a new cleaner csv and generating in csv and excel version
+df = reshape_database(df1)
+df.to_csv('Tidier_Dataset.csv', index=False)
+df.to_excel('Tidier_Dataset.xlsx', index=False)
 
+Creating a table of piechart with the Usage or not of each index
+pie_chart_per_year_per_standard_index(df)
 
+Computation of counts and percentages of the Industries with all 0s and 1s for each category throughout the 3 years
+and the computation of counts and percentage of Industries which presented either the SASB or the ESRS declaration in 2024
+counts_and_percentages_and_law_check(df)
+
+Adding ateco identifiers
+df_Extra = pd.read_csv('ATECO_codes.csv')
+adding_new_Ateco_identifiers(df_Extra, df)
+
+Making of the first figure of who has all 0s
+figure1(df)
+figure2(df)
+
+START OF THE CODE
+path = "Tidier_Dataset.csv"
+df = pd.read_csv(path)
 """
-for standard in standards:
-    for year in years:
-        df_column_name = f'{standard}_{year}'
-    f'{standard}' = (df[df_column_name] == 0 ).sum()
-"""
+
+#ACTUAL CODE
+path = "Tidier_Dataset.csv"
+df = pd.read_csv(path)
+figure2(df)
+
+
+
+#DEBUG
+
+
