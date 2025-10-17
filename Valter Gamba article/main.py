@@ -4,6 +4,7 @@ import seaborn as sns
 import scipy.stats as stats
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
+from matplotlib.ticker import PercentFormatter
 
 
 #OUTDATED/EXECUTED PROCESSES
@@ -339,6 +340,495 @@ def figure2(df):
     plt.savefig('fig2.png', dpi=300, bbox_inches='tight')
     plt.show()
 
+def figure3(df):
+    # Set professional style
+    plt.style.use('seaborn-v0_8-whitegrid')
+    sns.set_palette("husl")
+
+    # Display basic info
+    print("Dataset Overview:")
+    print(f"Total companies: {len(df)}")
+    print(f"Columns: {df.columns.tolist()}")
+    print("\nFirst few rows:")
+    print(df.head())
+
+    # Identify reporting standard columns
+    reporting_cols = ['GRI_2022', 'ESRS_2022', 'SASB_2022',
+                      'GRI_2023', 'ESRS_2023', 'SASB_2023',
+                      'GRI_2024', 'ESRS_2024', 'SASB_2024']
+
+    # Create a flag for companies with all 9 values = 0
+    df['all_zeros'] = (df[reporting_cols].sum(axis=1) == 0)
+
+    print(f"\nCompanies with all zeros: {df['all_zeros'].sum()} ({df['all_zeros'].mean() * 100:.1f}%)")
+
+    # Analyze by Ateco sector (2-digit code)
+    # First, let's clean the Ateco column and convert to string
+    df['Ateco'] = df['Ateco'].astype(str)
+
+    # Get the sector description for each Ateco code
+    sector_mapping = df[['Ateco', 'AtecoX']].drop_duplicates().set_index('Ateco')['AtecoX'].to_dict()
+
+    # Calculate statistics by sector
+    sector_stats = df.groupby('Ateco').agg({
+        'all_zeros': ['count', 'sum', 'mean'],
+        'Name': 'first'
+    }).round(3)
+
+    # Flatten column names
+    sector_stats.columns = ['total_companies', 'zero_companies', 'zero_percentage', 'dummy']
+    sector_stats = sector_stats.drop('dummy', axis=1)
+
+    # Calculate weighted percentage (percentage of total zeros coming from each sector)
+    total_zeros = sector_stats['zero_companies'].sum()
+    sector_stats['weighted_percentage'] = (sector_stats['zero_companies'] / total_zeros * 100).round(1)
+
+    # Add sector descriptions
+    sector_stats['sector_description'] = sector_stats.index.map(sector_mapping)
+
+    # Filter out sectors with no data or very few companies
+    sector_stats = sector_stats[sector_stats['total_companies'] >= 1]
+
+    print(f"\nSectors with highest absolute number of zero-reporting companies:")
+    print(sector_stats.nlargest(10, 'zero_companies')[
+              ['total_companies', 'zero_companies', 'zero_percentage', 'weighted_percentage', 'sector_description']])
+
+    print(f"\nSectors with highest percentage of zero-reporting companies:")
+    high_percentage_sectors = sector_stats[sector_stats['total_companies'] >= 3].nlargest(10, 'zero_percentage')
+    print(high_percentage_sectors[
+              ['total_companies', 'zero_companies', 'zero_percentage', 'weighted_percentage', 'sector_description']])
+
+    # Create visualizations
+    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(20, 14))
+
+    # 1. Bar plot: Weighted percentage of zero-reporting companies by sector
+    top_sectors_weighted = sector_stats.nlargest(15, 'weighted_percentage')
+    bars1 = ax1.bar(range(len(top_sectors_weighted)),
+                    top_sectors_weighted['weighted_percentage'],
+                    color='lightcoral', edgecolor='darkred', linewidth=0.5)
+
+    ax1.set_title('A. Sectors Contributing Most to Zero-Reporting Companies\n(Weighted by Percentage of Total Zeros)',
+                  fontsize=14, fontweight='bold', pad=20)
+    ax1.set_ylabel('Percentage of Total Zero-Reporting Companies (%)', fontsize=12)
+    ax1.set_xlabel('ATECO Sector Code', fontsize=12)
+
+    # Add sector labels with descriptions (truncated for readability)
+    labels = [f"{idx}\n{desc[:25]}..." if len(desc) > 25 else f"{idx}\n{desc}"
+              for idx, desc in zip(top_sectors_weighted.index, top_sectors_weighted['sector_description'])]
+    ax1.set_xticks(range(len(top_sectors_weighted)))
+    ax1.set_xticklabels(labels, rotation=45, ha='right', fontsize=9)
+
+    # Add value labels on bars
+    for bar, value in zip(bars1, top_sectors_weighted['weighted_percentage']):
+        ax1.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.5,
+                 f'{value:.1f}%', ha='center', va='bottom', fontsize=9, fontweight='bold')
+
+    # 2. Bar plot: Percentage of companies with zeros within each sector
+    top_sectors_rate = sector_stats[sector_stats['total_companies'] >= 3].nlargest(15, 'zero_percentage')
+    bars2 = ax2.bar(range(len(top_sectors_rate)),
+                    top_sectors_rate['zero_percentage'] * 100,
+                    color='skyblue', edgecolor='navy', linewidth=0.5)
+
+    ax2.set_title('B. Sectors with Highest Rate of Zero-Reporting Companies\n(Percentage within Sector)',
+                  fontsize=14, fontweight='bold', pad=20)
+    ax2.set_ylabel('Percentage of Companies with Zero Reporting (%)', fontsize=12)
+    ax2.set_xlabel('ATECO Sector Code', fontsize=12)
+    ax2.set_ylim(0, 110)
+
+    # Add sector labels
+    labels2 = [f"{idx}\n{desc[:25]}..." if len(desc) > 25 else f"{idx}\n{desc}"
+               for idx, desc in zip(top_sectors_rate.index, top_sectors_rate['sector_description'])]
+    ax2.set_xticks(range(len(top_sectors_rate)))
+    ax2.set_xticklabels(labels2, rotation=45, ha='right', fontsize=9)
+
+    # Add value labels and sample size
+    for i, (bar, value, total) in enumerate(
+            zip(bars2, top_sectors_rate['zero_percentage'] * 100, top_sectors_rate['total_companies'])):
+        ax2.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 2,
+                 f'{value:.0f}%', ha='center', va='bottom', fontsize=9, fontweight='bold')
+        ax2.text(bar.get_x() + bar.get_width() / 2, -5,
+                 f'n={int(total)}', ha='center', va='top', fontsize=8, color='gray')
+
+    # 3. Pie chart: Distribution of zero-reporting companies across sectors
+    # Group smaller sectors into "Others"
+    pie_data = sector_stats.nlargest(8, 'weighted_percentage').copy()
+    others_sum = sector_stats['weighted_percentage'].sum() - pie_data['weighted_percentage'].sum()
+    others_row = pd.DataFrame({
+        'weighted_percentage': [others_sum],
+        'sector_description': ['Other Sectors'],
+        'zero_companies': [sector_stats['zero_companies'].sum() - pie_data['zero_companies'].sum()]
+    }, index=['Other'])
+
+    pie_data = pd.concat([pie_data, others_row])
+
+    # Create pie chart
+    colors = plt.cm.Set3(np.linspace(0, 1, len(pie_data)))
+    wedges, texts, autotexts = ax3.pie(pie_data['weighted_percentage'],
+                                       labels=pie_data.index,
+                                       autopct='%1.1f%%',
+                                       startangle=90,
+                                       colors=colors,
+                                       textprops={'fontsize': 10})
+
+    ax3.set_title('C. Distribution of Zero-Reporting Companies\nAcross Sectors (Weighted)',
+                  fontsize=14, fontweight='bold', pad=20)
+
+    # Improve pie chart labels
+    for i, (wedge, text) in enumerate(zip(wedges, texts)):
+        sector_idx = pie_data.index[i]
+        desc = pie_data.loc[sector_idx, 'sector_description'][:20] + '...' if len(
+            pie_data.loc[sector_idx, 'sector_description']) > 20 else pie_data.loc[sector_idx, 'sector_description']
+        text.set_text(f"{sector_idx}\n{desc}")
+
+    # 4. Overall statistics and summary
+    ax4.axis('off')
+    summary_text = (
+        f"ANALYSIS SUMMARY\n\n"
+        f"Total Companies: {len(df):,}\n"
+        f"Zero-Reporting Companies: {df['all_zeros'].sum():,}\n"
+        f"Overall Rate: {df['all_zeros'].mean() * 100:.1f}%\n\n"
+        f"KEY FINDINGS:\n"
+        f"• {sector_stats.loc['70', 'zero_companies']:.0f} zero-reporting companies\n  in Sector 70 (Management Consulting)\n"
+        f"• {sector_stats.loc['64', 'zero_companies']:.0f} zero-reporting companies\n  in Sector 64 (Financial Services)\n"
+        f"• {sector_stats.loc['46', 'zero_companies']:.0f} zero-reporting companies\n  in Sector 46 (Wholesale Trade)\n\n"
+        f"These 3 sectors account for\n{sector_stats.loc[['70', '64', '46'], 'weighted_percentage'].sum():.1f}% of all\nzero-reporting companies"
+    )
+
+    ax4.text(0.1, 0.9, summary_text, fontsize=12, va='top', linespacing=1.5,
+             bbox=dict(boxstyle="round,pad=0.3", facecolor="lightblue", alpha=0.3))
+
+    plt.tight_layout()
+    plt.show()
+
+    # Additional detailed table for the article
+    print("\n" + "=" * 80)
+    print("DETAILED SECTOR ANALYSIS FOR ACADEMIC ARTICLE")
+    print("=" * 80)
+
+    detailed_table = sector_stats.nlargest(15, 'weighted_percentage')[
+        ['total_companies', 'zero_companies', 'zero_percentage', 'weighted_percentage', 'sector_description']].copy()
+    detailed_table['zero_percentage'] = (detailed_table['zero_percentage'] * 100).round(1)
+    detailed_table = detailed_table.rename(columns={
+        'total_companies': 'Total Companies',
+        'zero_companies': 'Zero-Reporting',
+        'zero_percentage': 'Sector Rate (%)',
+        'weighted_percentage': 'Weighted Share (%)',
+        'sector_description': 'Sector Description'
+    })
+
+    print(detailed_table.to_string(max_colwidth=40))
+
+    # Calculate some additional statistics for the article
+    print(f"\nADDITIONAL INSIGHTS:")
+    print(f"- Sectors with 100% zero-reporting rate: {len(sector_stats[sector_stats['zero_percentage'] == 1])}")
+    print(
+        f"- Sectors with mixed reporting: {len(sector_stats[(sector_stats['zero_percentage'] > 0) & (sector_stats['zero_percentage'] < 1)])}")
+    print(f"- Sectors with no zero-reporting: {len(sector_stats[sector_stats['zero_percentage'] == 0])}")
+
+    # Show sectors that are completely non-compliant (100% zeros)
+    completely_non_compliant = sector_stats[
+        (sector_stats['zero_percentage'] == 1) & (sector_stats['total_companies'] >= 2)]
+    if not completely_non_compliant.empty:
+        print(f"\nSECTORS WITH 100% ZERO-REPORTING (≥2 companies):")
+        for idx, row in completely_non_compliant.iterrows():
+            print(f"  - Sector {idx}: {row['sector_description']} ({int(row['total_companies'])} companies)")
+
+def figure4(df):
+    # Set professional style
+    plt.style.use('seaborn-v0_8-whitegrid')
+    sns.set_palette("husl")
+
+    # Identify reporting standard columns
+    reporting_cols = ['GRI_2022', 'ESRS_2022', 'SASB_2022',
+                      'GRI_2023', 'ESRS_2023', 'SASB_2023',
+                      'GRI_2024', 'ESRS_2024', 'SASB_2024']
+
+    # Create a flag for companies with all 9 values = 0
+    df['all_zeros'] = (df[reporting_cols].sum(axis=1) == 0)
+
+    # Analyze by Ateco sector (2-digit code)
+    df['Ateco'] = df['Ateco'].astype(str)
+
+    # Calculate statistics by sector
+    sector_stats = df.groupby('Ateco').agg({
+        'all_zeros': ['count', 'sum', 'mean']
+    }).round(3)
+
+    # Flatten column names
+    sector_stats.columns = ['total_companies', 'zero_companies', 'zero_percentage']
+    sector_stats = sector_stats[sector_stats['total_companies'] >= 1]
+
+    # Calculate weighted percentage
+    total_zeros = sector_stats['zero_companies'].sum()
+    sector_stats['weighted_percentage'] = (sector_stats['zero_companies'] / total_zeros * 100).round(1)
+
+    # GRAPH 1: Weighted percentage of zero-reporting companies by sector
+    plt.figure(figsize=(12, 8))
+    top_sectors_weighted = sector_stats.nlargest(15, 'weighted_percentage')
+    bars1 = plt.bar(range(len(top_sectors_weighted)),
+                    top_sectors_weighted['weighted_percentage'],
+                    color='lightcoral', edgecolor='darkred', linewidth=0.5)
+
+    plt.title('Sectors Contributing Most to Zero-Reporting Companies\n(Weighted by Percentage of Total Zeros)',
+              fontsize=14, fontweight='bold', pad=20)
+    plt.ylabel('Percentage of Total Zero-Reporting Companies (%)', fontsize=12)
+    plt.xlabel('ATECO Sector Code', fontsize=12)
+
+    # Use only Ateco codes as labels
+    labels = [f"{idx}" for idx in top_sectors_weighted.index]
+    plt.xticks(range(len(top_sectors_weighted)), labels, rotation=45, ha='right', fontsize=11)
+
+    # Add value labels on bars
+    for bar, value in zip(bars1, top_sectors_weighted['weighted_percentage']):
+        plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.5,
+                 f'{value:.1f}%', ha='center', va='bottom', fontsize=10, fontweight='bold')
+
+    plt.tight_layout()
+    plt.savefig('weighted_percentage_by_sector.png', dpi=300, bbox_inches='tight')
+    plt.show()
+
+    # GRAPH 2: Percentage of companies with zeros within each sector
+    plt.figure(figsize=(12, 8))
+    top_sectors_rate = sector_stats[sector_stats['total_companies'] >= 3].nlargest(15, 'zero_percentage')
+    bars2 = plt.bar(range(len(top_sectors_rate)),
+                    top_sectors_rate['zero_percentage'] * 100,
+                    color='skyblue', edgecolor='navy', linewidth=0.5)
+
+    plt.title('Sectors with Highest Rate of Zero-Reporting Companies\n(Percentage within Sector)',
+              fontsize=14, fontweight='bold', pad=20)
+    plt.ylabel('Percentage of Companies with Zero Reporting (%)', fontsize=12)
+    plt.xlabel('ATECO Sector Code', fontsize=12)
+    plt.ylim(0, 110)
+
+    # Use only Ateco codes as labels
+    labels2 = [f"{idx}" for idx in top_sectors_rate.index]
+    plt.xticks(range(len(top_sectors_rate)), labels2, rotation=45, ha='right', fontsize=11)
+
+    # Add value labels and sample size
+    for i, (bar, value, total) in enumerate(
+            zip(bars2, top_sectors_rate['zero_percentage'] * 100, top_sectors_rate['total_companies'])):
+        plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 2,
+                 f'{value:.0f}%', ha='center', va='bottom', fontsize=10, fontweight='bold')
+        plt.text(bar.get_x() + bar.get_width() / 2, -5,
+                 f'n={int(total)}', ha='center', va='top', fontsize=9, color='gray')
+
+    plt.tight_layout()
+    plt.savefig('sector_zero_rates.png', dpi=300, bbox_inches='tight')
+    plt.show()
+
+    # GRAPH 3: Pie chart - Distribution of zero-reporting companies across sectors
+    plt.figure(figsize=(10, 8))
+
+    # Group smaller sectors into "Others"
+    pie_data = sector_stats.nlargest(8, 'weighted_percentage').copy()
+    others_sum = sector_stats['weighted_percentage'].sum() - pie_data['weighted_percentage'].sum()
+    others_row = pd.DataFrame({
+        'weighted_percentage': [others_sum],
+        'zero_companies': [sector_stats['zero_companies'].sum() - pie_data['zero_companies'].sum()]
+    }, index=['Other'])
+
+    pie_data = pd.concat([pie_data, others_row])
+
+    # Create pie chart
+    colors = plt.cm.Set3(np.linspace(0, 1, len(pie_data)))
+    wedges, texts, autotexts = plt.pie(pie_data['weighted_percentage'],
+                                       labels=pie_data.index,
+                                       autopct='%1.1f%%',
+                                       startangle=90,
+                                       colors=colors,
+                                       textprops={'fontsize': 11})
+
+    plt.title('Distribution of Zero-Reporting Companies\nAcross Sectors (Weighted)',
+              fontsize=14, fontweight='bold', pad=20)
+
+    plt.tight_layout()
+    plt.savefig('sector_distribution_pie.png', dpi=300, bbox_inches='tight')
+    plt.show()
+
+    # Print summary statistics
+    print("ANALYSIS SUMMARY")
+    print("=" * 50)
+    print(f"Total Companies: {len(df):,}")
+    print(f"Zero-Reporting Companies: {df['all_zeros'].sum():,}")
+    print(f"Overall Zero-Reporting Rate: {df['all_zeros'].mean() * 100:.1f}%")
+    print(f"Total Sectors (Ateco codes): {len(sector_stats)}")
+
+    print(f"\nTop Sectors by Weighted Contribution:")
+    top_weighted = sector_stats.nlargest(5, 'weighted_percentage')
+    for idx, row in top_weighted.iterrows():
+        print(f"  Sector {idx}: {row['weighted_percentage']:.1f}% of total zeros")
+
+    print(f"\nTop Sectors by Zero-Reporting Rate (min. 3 companies):")
+    top_rates = sector_stats[sector_stats['total_companies'] >= 3].nlargest(5, 'zero_percentage')
+    for idx, row in top_rates.iterrows():
+        print(f"  Sector {idx}: {row['zero_percentage'] * 100:.1f}% zeros (n={int(row['total_companies'])})")
+
+def figure5(df):
+    # Set professional style with thinner grids
+    plt.style.use('seaborn-v0_8-whitegrid')
+    sns.set_palette("husl")
+
+    # Customize grid to be thinner and less aggressive
+    plt.rcParams['grid.linewidth'] = 0.3
+    plt.rcParams['grid.alpha'] = 0.5
+
+    # Identify reporting standard columns
+    reporting_cols = ['GRI_2022', 'ESRS_2022', 'SASB_2022',
+                      'GRI_2023', 'ESRS_2023', 'SASB_2023',
+                      'GRI_2024', 'ESRS_2024', 'SASB_2024']
+
+    # Create a flag for companies with all 9 values = 0
+    df['all_zeros'] = (df[reporting_cols].sum(axis=1) == 0)
+
+    # Analyze by Ateco sector (2-digit code)
+    df['Ateco'] = df['Ateco'].astype(str)
+
+    # Calculate statistics by sector
+    sector_stats = df.groupby('Ateco').agg({
+        'all_zeros': ['count', 'sum', 'mean']
+    }).round(3)
+
+    # Flatten column names
+    sector_stats.columns = ['total_companies', 'zero_companies', 'zero_percentage']
+    sector_stats = sector_stats[sector_stats['total_companies'] >= 1]
+
+    # Calculate weighted percentage
+    total_zeros = sector_stats['zero_companies'].sum()
+    sector_stats['weighted_percentage'] = (sector_stats['zero_companies'] / total_zeros * 100).round(1)
+
+    # ANALYSIS 1: Weighted percentage of zero-reporting companies by sector
+
+    # Bar plot for Analysis 1
+    plt.figure(figsize=(12, 8))
+    top_sectors_weighted = sector_stats.nlargest(15, 'weighted_percentage')
+    bars1 = plt.bar(range(len(top_sectors_weighted)),
+                    top_sectors_weighted['weighted_percentage'],
+                    color='lightcoral', edgecolor='darkred', linewidth=0.5)
+
+    plt.title('Sectors Contributing Most to Zero-Reporting Companies\n(Weighted by Percentage of Total Zeros)',
+              fontsize=14, fontweight='bold', pad=20)
+    plt.ylabel('Percentage of Total Zero-Reporting Companies (%)', fontsize=12)
+    plt.xlabel('ATECO Sector Code', fontsize=12)
+
+    # Use only Ateco codes as labels
+    labels = [f"{idx}" for idx in top_sectors_weighted.index]
+    plt.xticks(range(len(top_sectors_weighted)), labels, rotation=45, ha='right', fontsize=11)
+
+    # Add value labels on bars
+    for bar, value in zip(bars1, top_sectors_weighted['weighted_percentage']):
+        plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.5,
+                 f'{value:.1f}%', ha='center', va='bottom', fontsize=10, fontweight='bold')
+
+    plt.tight_layout()
+    plt.savefig('weighted_percentage_by_sector.png', dpi=300, bbox_inches='tight')
+    plt.show()
+
+    # Pie chart for Analysis 1
+    plt.figure(figsize=(10, 8))
+
+    # Group smaller sectors into "Others" for pie chart
+    pie_data1 = sector_stats.nlargest(8, 'weighted_percentage').copy()
+    others_sum1 = sector_stats['weighted_percentage'].sum() - pie_data1['weighted_percentage'].sum()
+    others_row1 = pd.DataFrame({
+        'weighted_percentage': [others_sum1],
+        'zero_companies': [sector_stats['zero_companies'].sum() - pie_data1['zero_companies'].sum()]
+    }, index=['Other'])
+
+    pie_data1 = pd.concat([pie_data1, others_row1])
+
+    # Create pie chart
+    colors1 = plt.cm.Set3(np.linspace(0, 1, len(pie_data1)))
+    wedges1, texts1, autotexts1 = plt.pie(pie_data1['weighted_percentage'],
+                                          labels=pie_data1.index,
+                                          autopct='%1.1f%%',
+                                          startangle=90,
+                                          colors=colors1,
+                                          textprops={'fontsize': 11})
+
+    plt.title('Distribution of Zero-Reporting Companies\nAcross Sectors (Weighted)',
+              fontsize=14, fontweight='bold', pad=20)
+
+    plt.tight_layout()
+    plt.savefig('sector_distribution_weighted_pie.png', dpi=300, bbox_inches='tight')
+    plt.show()
+
+    # ANALYSIS 2: Percentage of companies with zeros within each sector
+
+    # Bar plot for Analysis 2
+    plt.figure(figsize=(12, 8))
+    top_sectors_rate = sector_stats[sector_stats['total_companies'] >= 3].nlargest(15, 'zero_percentage')
+    bars2 = plt.bar(range(len(top_sectors_rate)),
+                    top_sectors_rate['zero_percentage'] * 100,
+                    color='skyblue', edgecolor='navy', linewidth=0.5)
+
+    plt.title('Sectors with Highest Rate of Zero-Reporting Companies\n(Percentage within Sector)',
+              fontsize=14, fontweight='bold', pad=20)
+    plt.ylabel('Percentage of Companies with Zero Reporting (%)', fontsize=12)
+    plt.xlabel('ATECO Sector Code', fontsize=12)
+    plt.ylim(0, 110)
+
+    # Use only Ateco codes as labels - increased bottom margin to prevent overlap
+    labels2 = [f"{idx}" for idx in top_sectors_rate.index]
+    plt.xticks(range(len(top_sectors_rate)), labels2, rotation=45, ha='right', fontsize=11)
+
+    # Add value labels and sample size - adjusted positions to prevent overlap
+    for i, (bar, value, total) in enumerate(
+            zip(bars2, top_sectors_rate['zero_percentage'] * 100, top_sectors_rate['total_companies'])):
+        plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 2,
+                 f'{value:.0f}%', ha='center', va='bottom', fontsize=10, fontweight='bold')
+        # Move n= labels further down and make them smaller to prevent overlap with x-axis labels
+        plt.text(bar.get_x() + bar.get_width() / 2, -8,
+                 f'n={int(total)}', ha='center', va='top', fontsize=8, color='gray', alpha=0.8)
+
+    # Adjust subplot parameters to give more room at the bottom
+    plt.subplots_adjust(bottom=0.15)
+
+    plt.tight_layout()
+    plt.savefig('sector_zero_rates.png', dpi=300, bbox_inches='tight')
+    plt.show()
+
+    # Pie chart for Analysis 2 - Showing more sectors without "Others" category
+    plt.figure(figsize=(12, 10))
+
+    # Get top sectors by zero rate (with at least 3 companies) - show more sectors
+    top_pie_sectors = sector_stats[sector_stats['total_companies'] >= 3].nlargest(12, 'zero_percentage')
+
+    # Create custom labels showing sector code, rate, and sample size
+    def make_rate_label(idx, row):
+        return f"Sector {idx}\n{row['zero_percentage'] * 100:.0f}% (n={int(row['total_companies'])})"
+
+    labels_pie2 = [make_rate_label(idx, row) for idx, row in top_pie_sectors.iterrows()]
+
+    # Use the zero percentage as the size for the pie chart
+    sizes = top_pie_sectors['zero_percentage'] * 100
+
+    # Create a more distinct color palette
+    colors2 = plt.cm.tab20(np.linspace(0, 1, len(top_pie_sectors)))
+
+    # Print summary statistics
+    print("ANALYSIS SUMMARY")
+    print("=" * 50)
+    print(f"Total Companies: {len(df):,}")
+    print(f"Zero-Reporting Companies: {df['all_zeros'].sum():,}")
+    print(f"Overall Zero-Reporting Rate: {df['all_zeros'].mean() * 100:.1f}%")
+    print(f"Total Sectors (Ateco codes): {len(sector_stats)}")
+
+    print(f"\nTop Sectors by Weighted Contribution:")
+    top_weighted = sector_stats.nlargest(5, 'weighted_percentage')
+    for idx, row in top_weighted.iterrows():
+        print(f"  Sector {idx}: {row['weighted_percentage']:.1f}% of total zeros")
+
+    print(f"\nTop Sectors by Zero-Reporting Rate (min. 3 companies):")
+    top_rates = sector_stats[sector_stats['total_companies'] >= 3].nlargest(5, 'zero_percentage')
+    for idx, row in top_rates.iterrows():
+        print(f"  Sector {idx}: {row['zero_percentage'] * 100:.1f}% zeros (n={int(row['total_companies'])})")
+
+    # Additional statistics about high zero rate sectors
+    print(f"\nSectors with 100% Zero-Reporting (any sample size):")
+    hundred_percent_sectors = sector_stats[sector_stats['zero_percentage'] == 1]
+    for idx, row in hundred_percent_sectors.iterrows():
+        print(f"  Sector {idx}: {int(row['total_companies'])} companies")
+
 #######################################
 
 """
@@ -367,6 +857,9 @@ adding_new_Ateco_identifiers(df_Extra, df)
 Making of the first figure of who has all 0s
 figure1(df)
 figure2(df)
+figure3(df)
+figure4(df)
+figure5(df)
 
 START OF THE CODE
 path = "Tidier_Dataset.csv"
@@ -376,8 +869,6 @@ df = pd.read_csv(path)
 #ACTUAL CODE
 path = "Tidier_Dataset.csv"
 df = pd.read_csv(path)
-figure2(df)
-
 
 
 #DEBUG
