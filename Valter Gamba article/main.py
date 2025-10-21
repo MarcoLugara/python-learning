@@ -844,23 +844,24 @@ def step1(df_Extra, df):
     df1.to_csv('step1.csv', index=False)
     df1.to_excel('step1.xlsx', index=False)
 
-    input_file = "step1.py"
-    output_file = "step2.py"
+    input_file = "step1.csv"
+    output_file = "step2.csv"
 
     rows = []
 
-    # Read the CSV file
+    # Read the CSV file - FIXED INDENTATION
     with open(input_file, 'r', encoding='utf-8') as f:
         reader = csv.DictReader(f)
         fieldnames = reader.fieldnames
 
-    for row in reader:
-        codice = row['Codice'].strip()
-        # Check if Codice is NOT a single letter (A-Z)
-        if not re.match(r'^[A-Z]$', codice):
-            row['Codice_desc'] = ''
-        rows.append(row)
-    print(rows)
+        # Moved this inside the with block
+        for row in reader:
+            codice = row['Codice'].strip()
+            # Check if Codice is NOT a single letter (A-Z)
+            if not re.match(r'^[A-Z]$', codice):
+                row['Codice_desc'] = ''
+            rows.append(row)
+        #print(rows)
 
     # Write the modified data
     with open(output_file, 'w', newline='', encoding='utf-8') as f:
@@ -870,7 +871,11 @@ def step1(df_Extra, df):
 
     print(f"File processed successfully. Output saved to: {output_file}")
 
-    return df1
+
+
+
+
+
 
 
 #######################################
@@ -897,6 +902,19 @@ Adding ateco identifiers
 df_Extra = pd.read_csv('ATECO_codes.csv')
 adding_new_Ateco_identifiers(df_Extra, df)
 
+# Updating the csv and excel
+df.to_csv('Tidier_Dataset.csv', index=False)
+df.to_excel('Tidier_Dataset.xlsx', index=False)
+
+#Reorder columns
+print(df.columns.to_list())
+df = df[['Name', 'ateco_section', 'ateco_sectionX', 'Ateco', 'AtecoX', 'ATECO', 'ATECOx', 'GRI_2022', 'ESRS_2022', 'SASB_2022', 'GRI_2023', 'ESRS_2023', 'SASB_2023', 'GRI_2024', 'ESRS_2024', 'SASB_2024']]
+print(df.columns.to_list())
+
+# Updating the csv and excel
+df.to_csv('Tidier_Dataset.csv', index=False)
+df.to_excel('Tidier_Dataset.xlsx', index=False)
+
 Making of the first figure of who has all 0s
 figure1(df)
 figure2(df)
@@ -912,9 +930,14 @@ df = pd.read_csv(path)
 #ACTUAL CODE
 path = "Tidier_Dataset.csv"
 df = pd.read_csv(path)
-df_Extra = pd.read_csv('ATECO_codes.csv')
 
-step1(df_Extra, df)
+df = df.rename(columns={
+        'ateco_section': 'ateco',
+        'ateco_section': 'atecoX'})
+# Updating the csv and excel
+df.to_csv('Tidier_Dataset.csv', index=False)
+df.to_excel('Tidier_Dataset.xlsx', index=False)
+
 
 
 #DEBUG
