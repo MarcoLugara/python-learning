@@ -1,10 +1,12 @@
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import scipy.stats as stats
+#import scipy.stats as stats
 import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap
-from matplotlib.ticker import PercentFormatter
+#from matplotlib.colors import ListedColormap
+#from matplotlib.ticker import PercentFormatter
+import csv
+import re
 
 
 #OUTDATED/EXECUTED PROCESSES
@@ -66,6 +68,9 @@ def reshape_database(df1):
 
     # Delete the last useless row
     df = df.drop(df.index[-1])
+
+    df.to_csv('Tidier_Dataset.csv', index=False)
+    df.to_excel('Tidier_Dataset.xlsx', index=False)
 
     """
     print(f"Original shape: {df3.shape}")  --> Original shape: (876, 7)
@@ -167,7 +172,7 @@ def adding_new_Ateco_identifiers(df_Extra, df):
     It's a perfect match if the length of all iterable1, iterable2, etc... is the same
     """
 
-    # Creating the new 2 columns which have the first 2 characters of ATECO and the related descirption from the ISTAT DF
+    # Creating the new 2 columns which have the first 2 characters of ATECO and the related description from the ISTAT DF
     df['Ateco'] = df['ATECO'].astype(str).str[:2]  # .str[:2] takes up to the 2nd character in the string
     df['AtecoX'] = df['Ateco'].map(mapping_dict)
 
@@ -829,6 +834,45 @@ def figure5(df):
     for idx, row in hundred_percent_sectors.iterrows():
         print(f"  Sector {idx}: {int(row['total_companies'])} companies")
 
+def step1(df_Extra, df):
+    df_Extra = pd.read_csv('ATECO_codes.csv')
+    df_Extra = df_Extra.rename(columns={
+        'Codice Ateco': 'Codice',
+        'Titolo Ateco 2007 aggiornamento 2022': 'Codice_desc'}
+    )
+    df1 = df_Extra[['Codice', 'Codice_desc']]
+    df1.to_csv('step1.csv', index=False)
+    df1.to_excel('step1.xlsx', index=False)
+
+    input_file = "step1.py"
+    output_file = "step2.py"
+
+    rows = []
+
+    # Read the CSV file
+    with open(input_file, 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        fieldnames = reader.fieldnames
+
+    for row in reader:
+        codice = row['Codice'].strip()
+        # Check if Codice is NOT a single letter (A-Z)
+        if not re.match(r'^[A-Z]$', codice):
+            row['Codice_desc'] = ''
+        rows.append(row)
+    print(rows)
+
+    # Write the modified data
+    with open(output_file, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+    print(f"File processed successfully. Output saved to: {output_file}")
+
+    return df1
+
+
 #######################################
 
 """
@@ -840,8 +884,7 @@ df1= pd.read_csv(path1)
 Reshaping the database with GRI, ESRS, SASB and widening the columns of the previous indexes into the three years
 and creating a new cleaner csv and generating in csv and excel version
 df = reshape_database(df1)
-df.to_csv('Tidier_Dataset.csv', index=False)
-df.to_excel('Tidier_Dataset.xlsx', index=False)
+
 
 Creating a table of piechart with the Usage or not of each index
 pie_chart_per_year_per_standard_index(df)
@@ -869,6 +912,9 @@ df = pd.read_csv(path)
 #ACTUAL CODE
 path = "Tidier_Dataset.csv"
 df = pd.read_csv(path)
+df_Extra = pd.read_csv('ATECO_codes.csv')
+
+step1(df_Extra, df)
 
 
 #DEBUG
