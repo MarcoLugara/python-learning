@@ -112,7 +112,7 @@ def pie_chart_per_year_per_standard_index(df):
 
     plt.tight_layout()  # Prevents overlapping
     plt.savefig('INSERIRE TITOLO ADEGUATO (2022-2024).png')
-    #plt.show()
+    ##plt.show()
 
 #Check of all 0s and all 1s and check of who did ESRS or SASB in 2024
 def counts_and_percentages_and_law_check(df):
@@ -245,7 +245,7 @@ def figure1(df):
     # Adjust layout
     plt.tight_layout()
     # Show and save the plot
-    #plt.show()
+    ##plt.show()
     plt.savefig('fig1.png')
 
 def figure2(df):
@@ -343,7 +343,7 @@ def figure2(df):
 
     # Show and save the plot
     plt.savefig('fig2.png', dpi=300, bbox_inches='tight')
-    plt.show()
+    #plt.show()
 
 def figure3(df):
     # Set professional style
@@ -504,7 +504,7 @@ def figure3(df):
 
     plt.tight_layout()
     plt.savefig('fig3.png', dpi=300, bbox_inches='tight')
-    plt.show()
+    #plt.show()
 
     # Additional detailed table for the article
     print("\n" + "=" * 80)
@@ -591,7 +591,7 @@ def figure4(df):
 
     plt.tight_layout()
     plt.savefig('weighted_percentage_by_sector.png', dpi=300, bbox_inches='tight')
-    plt.show()
+    #plt.show()
 
     # GRAPH 2: Percentage of companies with zeros within each sector
     plt.figure(figsize=(12, 8))
@@ -620,7 +620,7 @@ def figure4(df):
 
     plt.tight_layout()
     plt.savefig('sector_zero_rates.png', dpi=300, bbox_inches='tight')
-    plt.show()
+    #plt.show()
 
     # GRAPH 3: Pie chart - Distribution of zero-reporting companies across sectors
     plt.figure(figsize=(10, 8))
@@ -649,7 +649,7 @@ def figure4(df):
 
     plt.tight_layout()
     plt.savefig('sector_distribution_pie.png', dpi=300, bbox_inches='tight')
-    plt.show()
+    #plt.show()
 
     # Print summary statistics
     print("ANALYSIS SUMMARY")
@@ -727,7 +727,7 @@ def figure5(df):
 
     plt.tight_layout()
     plt.savefig('weighted_percentage_by_sector.png', dpi=300, bbox_inches='tight')
-    plt.show()
+    #plt.show()
 
     # Pie chart for Analysis 1
     plt.figure(figsize=(10, 8))
@@ -756,7 +756,7 @@ def figure5(df):
 
     plt.tight_layout()
     plt.savefig('sector_distribution_weighted_pie.png', dpi=300, bbox_inches='tight')
-    plt.show()
+    #plt.show()
 
     # ANALYSIS 2: Percentage of companies with zeros within each sector
 
@@ -791,7 +791,7 @@ def figure5(df):
 
     plt.tight_layout()
     plt.savefig('sector_zero_rates.png', dpi=300, bbox_inches='tight')
-    plt.show()
+    #plt.show()
 
     # Pie chart for Analysis 2 - Showing more sectors without "Others" category
     plt.figure(figsize=(12, 10))
@@ -924,7 +924,7 @@ def figure1_1(df):
     # Adjust layout
     plt.tight_layout()
     # Show and save the plot
-    #plt.show()
+    ##plt.show()
     plt.savefig('fig1_1.png')
 
 def figure2_1(df):
@@ -1022,7 +1022,7 @@ def figure2_1(df):
 
     # Show and save the plot
     plt.savefig('fig2_1.png', dpi=300, bbox_inches='tight')
-    plt.show()
+    #plt.show()
 
 def figure4_1(df):
     # Set professional style
@@ -1076,7 +1076,7 @@ def figure4_1(df):
 
     plt.tight_layout()
     plt.savefig('weighted_percentage_by_section.png', dpi=300, bbox_inches='tight')
-    plt.show()
+    #plt.show()
 
     # GRAPH 2: Percentage of companies with zeros within each sector
     plt.figure(figsize=(12, 8))
@@ -1105,7 +1105,7 @@ def figure4_1(df):
 
     plt.tight_layout()
     plt.savefig('section_zero_rates.png', dpi=300, bbox_inches='tight')
-    plt.show()
+    #plt.show()
 
     # GRAPH 3: Pie chart - Distribution of zero-reporting companies across sectors
     plt.figure(figsize=(10, 8))
@@ -1134,7 +1134,7 @@ def figure4_1(df):
 
     plt.tight_layout()
     plt.savefig('section_distribution_pie.png', dpi=300, bbox_inches='tight')
-    plt.show()
+    #plt.show()
 
     # Print summary statistics
     print("ANALYSIS SUMMARY")
@@ -1278,7 +1278,7 @@ def figure5_1(df):
 
     plt.tight_layout()
     plt.savefig('weighted_percentage_by_section.png', dpi=300, bbox_inches='tight')
-    plt.show()
+    #plt.show()
 
     # Pie chart for Analysis 1
     plt.figure(figsize=(10, 8))
@@ -1307,7 +1307,7 @@ def figure5_1(df):
 
     plt.tight_layout()
     plt.savefig('section_distribution_weighted_pie.png', dpi=300, bbox_inches='tight')
-    plt.show()
+    #plt.show()
 
     # ANALYSIS 2: Percentage of companies with zeros within each sector
 
@@ -1342,7 +1342,7 @@ def figure5_1(df):
 
     plt.tight_layout()
     plt.savefig('section_zero_rates.png', dpi=300, bbox_inches='tight')
-    plt.show()
+    #plt.show()
 
     # Pie chart for Analysis 2 - Showing more sectors without "Others" category
     plt.figure(figsize=(12, 10))
@@ -1420,7 +1420,13 @@ def create_gri_to_esrs_sasb_analysis(df):
 
     # ANALYSIS 3: Additional insights
     create_additional_insights(filtered_companies)
+    return df
 
+
+
+'''
+THE NEXT 3 FUNCTIONS ARE ALREADY DEFAULT USED IN THE ONE BEFORE
+'''
 def create_ateco_2digit_analysis(df):
     """Create visualizations for 2-digit ATECO codes"""
 
@@ -1459,7 +1465,7 @@ def create_ateco_2digit_analysis(df):
 
     plt.tight_layout()
     plt.savefig('gri_to_esrs_sasb_2digit_stacked.png', dpi=300, bbox_inches='tight')
-    plt.show()
+    #plt.show()
 
     # Plot 2: Percentage stacked bar chart
     plt.figure(figsize=(15, 8))
@@ -1489,7 +1495,7 @@ def create_ateco_2digit_analysis(df):
 
     plt.tight_layout()
     plt.savefig('gri_to_esrs_sasb_2digit_percentage.png', dpi=300, bbox_inches='tight')
-    plt.show()
+    #plt.show()
 
     # Plot 3: Donut chart for overall adoption distribution
     overall_adoption = df['Adoption_2024'].value_counts()
@@ -1521,8 +1527,7 @@ def create_ateco_2digit_analysis(df):
 
     plt.tight_layout()
     plt.savefig('gri_to_esrs_sasb_overall_donut.png', dpi=300, bbox_inches='tight')
-    plt.show()
-
+    #plt.show()
 def create_ateco_1char_analysis(df):
     """Create visualizations for 1-character ATECO codes"""
 
@@ -1566,7 +1571,7 @@ def create_ateco_1char_analysis(df):
 
     plt.tight_layout()
     plt.savefig('gri_to_esrs_sasb_1char_grouped.png', dpi=300, bbox_inches='tight')
-    plt.show()
+    #plt.show()
 
     # Plot 2: Heatmap for 1-character ATECO
     plt.figure(figsize=(10, 6))
@@ -1591,7 +1596,7 @@ def create_ateco_1char_analysis(df):
 
     plt.tight_layout()
     plt.savefig('gri_to_esrs_sasb_1char_heatmap.png', dpi=300, bbox_inches='tight')
-    plt.show()
+    #plt.show()
 
     # Plot 3: Pie chart for 1-character ATECO distribution
     plt.figure(figsize=(12, 8))
@@ -1619,8 +1624,7 @@ def create_ateco_1char_analysis(df):
 
     plt.tight_layout()
     plt.savefig('gri_to_esrs_sasb_1char_pie.png', dpi=300, bbox_inches='tight')
-    plt.show()
-
+    #plt.show()
 def create_additional_insights(df):
     """Create additional insightful visualizations"""
 
@@ -1654,7 +1658,7 @@ def create_additional_insights(df):
 
     plt.tight_layout()
     plt.savefig('gri_pattern_vs_2024_adoption.png', dpi=300, bbox_inches='tight')
-    plt.show()
+    #plt.show()
 
     # Insight 2: Summary statistics
     print("\n" + "=" * 60)
@@ -1751,6 +1755,14 @@ df = pd.read_csv(path)
 #ACTUAL CODE
 path = "Tidier_Dataset.csv"
 df = pd.read_csv(path)
+
+figure1(df)
+figure1_1(df)
+figure2(df)
+figure2_1(df)
+figure3(df)
+figure4(df)
+figure5(df)
 
 create_gri_to_esrs_sasb_analysis(df)
 
