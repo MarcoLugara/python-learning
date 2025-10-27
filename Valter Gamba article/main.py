@@ -202,7 +202,7 @@ def figure1(df):
     zero_adoption = data[data['Total_Adoption'] == 0].copy()
 
     # Extract 2-digit ATECO codes and count occurrences
-    zero_adoption['Ateco_2digit'] = zero_adoption['Ateco'].str[:2].fillna('na')
+    zero_adoption['Ateco_2digit'] = zero_adoption['Ateco'].astype(str).str[:2].fillna('na')
     ateco_counts = zero_adoption['Ateco_2digit'].value_counts().sort_index()
 
     # ATECOX descriptions for legend (unique 2-digit codes)
@@ -261,7 +261,7 @@ def figure2(df):
     esrs_sasb_adopters = data[(data['ESRS_2024'] == 1) | (data['SASB_2024'] == 1)].copy()
 
     # Extract 2-digit ATECO codes
-    esrs_sasb_adopters['Ateco_2digit'] = esrs_sasb_adopters['Ateco'].str[:2].fillna('na')
+    esrs_sasb_adopters['Ateco_2digit'] = esrs_sasb_adopters['Ateco'].astype(str).str[:2].fillna('na')
 
     # Group by ATECO code and count adoption types
     ateco_adoption = esrs_sasb_adopters.groupby('Ateco_2digit').agg({
@@ -503,6 +503,7 @@ def figure3(df):
              bbox=dict(boxstyle="round,pad=0.3", facecolor="lightblue", alpha=0.3))
 
     plt.tight_layout()
+    plt.savefig('fig3.png', dpi=300, bbox_inches='tight')
     plt.show()
 
     # Additional detailed table for the article
@@ -871,10 +872,822 @@ def step1(df_Extra, df):
 
     print(f"File processed successfully. Output saved to: {output_file}")
 
+def figure1_1(df):
+    # Load and process the dataset
+    data = df
+    framework_columns = ['GRI_2022', 'ESRS_2022', 'SASB_2022', 'GRI_2023', 'ESRS_2023', 'SASB_2023', 'GRI_2024',
+                         'ESRS_2024', 'SASB_2024']
+    data['Total_Adoption'] = data[framework_columns].sum(axis=1)
+    zero_adoption = data[data['Total_Adoption'] == 0].copy()
 
+    # Extract Ateco section Codes and count occurrences
+    zero_adoption['ateco_letter'] = zero_adoption['ateco']
+    ateco_counts = zero_adoption['ateco_letter'].value_counts().sort_index()
 
+    # ATECOX descriptions for legend (unique 2-digit codes)
+    ateco_descriptions = data[['ateco', 'atecoX']].drop_duplicates().set_index('ateco')['atecoX'].to_dict()
+    ateco_labels = {code: ateco_descriptions.get(code, 'Not Available') for code in ateco_counts.index}
 
+    # Create figure with a cool background
+    plt.figure(figsize=(12, 6), facecolor='#f0f8ff')
+    ax = plt.gca()
+    ax.set_facecolor('#e6f0fa')
 
+    # Bar plot with reversed gradient colors (red for high, green for low)
+    x = np.arange(len(ateco_counts))
+    # Normalize counts for color scaling (reversed: high = red, low = green)
+    norm_counts = ateco_counts.values / ateco_counts.max()
+    colors = plt.cm.RdYlGn_r(norm_counts)  # Reversed RdYlGn colormap
+
+    bars = plt.bar(x, ateco_counts.values, color=colors, edgecolor='white', linewidth=0.5)
+
+    # Customize the plot
+    plt.xlabel('Ateco Section', fontsize=12, fontweight='bold')
+    plt.ylabel('Number of Companies with No Adoption', fontsize=12, fontweight='bold')
+    plt.title('Distribution of Companies with No Framework Adoption\nby Ateco section (2022-2024)',
+              fontsize=14, fontweight='bold', pad=15, color='#2c3e50')
+    plt.xticks(x, ateco_counts.index, fontsize=10, rotation=0)
+    plt.yticks(fontsize=10)
+
+    # Add value labels on bars
+    for bar in bars:
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width() / 2., height,
+                f'{int(height)}', ha='center', va='bottom', fontsize=10, color='black')
+
+    # Add a subtle grid and fancy border
+    plt.grid(True, which='both', linestyle='--', alpha=0.3, linewidth=0.5)
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    ax.set_axisbelow(True)
+
+    # Adjust layout
+    plt.tight_layout()
+    # Show and save the plot
+    #plt.show()
+    plt.savefig('fig1_1.png')
+
+def figure2_1(df):
+    # Load and process the dataset
+    data = df.copy()
+
+    # Create adoption categories for 2024
+    data['ESRS_only'] = ((data['ESRS_2024'] == 1) & (data['SASB_2024'] == 0)).astype(int)
+    data['SASB_only'] = ((data['SASB_2024'] == 1) & (data['ESRS_2024'] == 0)).astype(int)
+    data['Both'] = ((data['ESRS_2024'] == 1) & (data['SASB_2024'] == 1)).astype(int)
+
+    # Filter companies that have at least one of the frameworks
+    esrs_sasb_adopters = data[(data['ESRS_2024'] == 1) | (data['SASB_2024'] == 1)].copy()
+
+    # Extract Ateco section Codes
+    esrs_sasb_adopters['ateco'] = esrs_sasb_adopters['ateco']
+
+    # Group by ATECO code and count adoption types
+    ateco_adoption = esrs_sasb_adopters.groupby('ateco').agg({
+        'ESRS_only': 'sum',
+        'SASB_only': 'sum',
+        'Both': 'sum'
+    }).fillna(0)
+
+    # Calculate total adopters per ATECO code
+    ateco_adoption['Total'] = ateco_adoption.sum(axis=1)
+    ateco_adoption = ateco_adoption.sort_values('Total', ascending=False)
+
+    # Get ATECO descriptions for legend
+    ateco_descriptions = data[['ateco', 'atecoX']].drop_duplicates().set_index('ateco')['atecoX'].to_dict()
+    ateco_labels = {code: ateco_descriptions.get(code, 'Not Available') for code in ateco_adoption.index}
+
+    # Create figure
+    plt.figure(figsize=(14, 8), facecolor='#f0f8ff')
+    ax = plt.gca()
+    ax.set_facecolor('#e6f0fa')
+
+    # Create stacked bar plot
+    x = np.arange(len(ateco_adoption))
+    bottom = np.zeros(len(ateco_adoption))
+
+    # Define colors for each category
+    colors = ['#2E86AB', '#A23B72', '#F18F01']  # ESRS_only, SASB_only, Both
+
+    bars1 = plt.bar(x, ateco_adoption['ESRS_only'], color=colors[0],
+                    edgecolor='white', linewidth=0.5, label='ESRS Only')
+    bottom += ateco_adoption['ESRS_only']
+
+    bars2 = plt.bar(x, ateco_adoption['SASB_only'], bottom=bottom, color=colors[1],
+                    edgecolor='white', linewidth=0.5, label='SASB Only')
+    bottom += ateco_adoption['SASB_only']
+
+    bars3 = plt.bar(x, ateco_adoption['Both'], bottom=bottom, color=colors[2],
+                    edgecolor='white', linewidth=0.5, label='Both Frameworks')
+
+    # Customize the plot
+    plt.xlabel('Ateco section Codes', fontsize=12, fontweight='bold')
+    plt.ylabel('Number of Companies', fontsize=12, fontweight='bold')
+    plt.title('Distribution of ESRS 2024 and SASB 2024 Framework Adoption\nby Ateco section Code',
+              fontsize=14, fontweight='bold', pad=15, color='#2c3e50')
+    plt.xticks(x, ateco_adoption.index, fontsize=10, rotation=45, ha='right')
+    plt.yticks(fontsize=10)
+
+    # Add value labels on bars (total per ATECO code)
+    for i, (idx, row) in enumerate(ateco_adoption.iterrows()):
+        total = row['Total']
+        if total > 0:
+            ax.text(i, total + 0.1, f'{int(total)}', ha='center', va='bottom',
+                    fontsize=9, fontweight='bold', color='#2c3e50')
+
+    # Add legend
+    plt.legend(title='Adoption Type', title_fontsize=10, fontsize=9,
+               loc='upper right', framealpha=0.9)
+
+    # Add a subtle grid and fancy border
+    plt.grid(True, which='both', linestyle='--', alpha=0.3, linewidth=0.5, axis='y')
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    ax.set_axisbelow(True)
+
+    # Adjust layout
+    plt.tight_layout()
+
+    # Print some statistics
+    total_esrs_only = esrs_sasb_adopters['ESRS_only'].sum()
+    total_sasb_only = esrs_sasb_adopters['SASB_only'].sum()
+    total_both = esrs_sasb_adopters['Both'].sum()
+    total_adopters = len(esrs_sasb_adopters)
+
+    print(f"Adoption Statistics (2024):")
+    print(f"Total companies with ESRS or SASB: {total_adopters}")
+    print(f"ESRS only: {total_esrs_only} ({total_esrs_only / total_adopters * 100:.1f}%)")
+    print(f"SASB only: {total_sasb_only} ({total_sasb_only / total_adopters * 100:.1f}%)")
+    print(f"Both frameworks: {total_both} ({total_both / total_adopters * 100:.1f}%)")
+
+    # Show and save the plot
+    plt.savefig('fig2_1.png', dpi=300, bbox_inches='tight')
+    plt.show()
+
+def figure4_1(df):
+    # Set professional style
+    plt.style.use('seaborn-v0_8-whitegrid')
+    sns.set_palette("husl")
+
+    # Identify reporting standard columns
+    reporting_cols = ['GRI_2022', 'ESRS_2022', 'SASB_2022',
+                      'GRI_2023', 'ESRS_2023', 'SASB_2023',
+                      'GRI_2024', 'ESRS_2024', 'SASB_2024']
+
+    # Create a flag for companies with all 9 values = 0
+    df['all_zeros'] = (df[reporting_cols].sum(axis=1) == 0)
+
+    # Analyze by Ateco sector (2-digit code)
+    df['ateco'] = df['ateco'].astype(str)
+
+    # Calculate statistics by sector
+    sector_stats = df.groupby('ateco').agg({
+        'all_zeros': ['count', 'sum', 'mean']
+    }).round(3)
+
+    # Flatten column names
+    sector_stats.columns = ['total_companies', 'zero_companies', 'zero_percentage']
+    sector_stats = sector_stats[sector_stats['total_companies'] >= 1]
+
+    # Calculate weighted percentage
+    total_zeros = sector_stats['zero_companies'].sum()
+    sector_stats['weighted_percentage'] = (sector_stats['zero_companies'] / total_zeros * 100).round(1)
+
+    # GRAPH 1: Weighted percentage of zero-reporting companies by sector
+    plt.figure(figsize=(12, 8))
+    top_sectors_weighted = sector_stats.nlargest(15, 'weighted_percentage')
+    bars1 = plt.bar(range(len(top_sectors_weighted)),
+                    top_sectors_weighted['weighted_percentage'],
+                    color='lightcoral', edgecolor='darkred', linewidth=0.5)
+
+    plt.title('Sections Contributing Most to Zero-Reporting Companies\n(Weighted by Percentage of Total Zeros)',
+              fontsize=14, fontweight='bold', pad=20)
+    plt.ylabel('Percentage of Total Zero-Reporting Companies (%)', fontsize=12)
+    plt.xlabel('Ateco Section Code', fontsize=12)
+
+    # Use only Ateco codes as labels
+    labels = [f"{idx}" for idx in top_sectors_weighted.index]
+    plt.xticks(range(len(top_sectors_weighted)), labels, rotation=45, ha='right', fontsize=11)
+
+    # Add value labels on bars
+    for bar, value in zip(bars1, top_sectors_weighted['weighted_percentage']):
+        plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.5,
+                 f'{value:.1f}%', ha='center', va='bottom', fontsize=10, fontweight='bold')
+
+    plt.tight_layout()
+    plt.savefig('weighted_percentage_by_section.png', dpi=300, bbox_inches='tight')
+    plt.show()
+
+    # GRAPH 2: Percentage of companies with zeros within each sector
+    plt.figure(figsize=(12, 8))
+    top_sectors_rate = sector_stats[sector_stats['total_companies'] >= 3].nlargest(15, 'zero_percentage')
+    bars2 = plt.bar(range(len(top_sectors_rate)),
+                    top_sectors_rate['zero_percentage'] * 100,
+                    color='skyblue', edgecolor='navy', linewidth=0.5)
+
+    plt.title('Sections with Highest Rate of Zero-Reporting Companies\n(Percentage within Section)',
+              fontsize=14, fontweight='bold', pad=20)
+    plt.ylabel('Percentage of Companies with Zero Reporting (%)', fontsize=12)
+    plt.xlabel('Ateco section Code', fontsize=12)
+    plt.ylim(0, 110)
+
+    # Use only Ateco codes as labels
+    labels2 = [f"{idx}" for idx in top_sectors_rate.index]
+    plt.xticks(range(len(top_sectors_rate)), labels2, rotation=45, ha='right', fontsize=11)
+
+    # Add value labels and sample size
+    for i, (bar, value, total) in enumerate(
+            zip(bars2, top_sectors_rate['zero_percentage'] * 100, top_sectors_rate['total_companies'])):
+        plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 2,
+                 f'{value:.0f}%', ha='center', va='bottom', fontsize=10, fontweight='bold')
+        plt.text(bar.get_x() + bar.get_width() / 2, -5,
+                 f'n={int(total)}', ha='center', va='top', fontsize=9, color='gray')
+
+    plt.tight_layout()
+    plt.savefig('section_zero_rates.png', dpi=300, bbox_inches='tight')
+    plt.show()
+
+    # GRAPH 3: Pie chart - Distribution of zero-reporting companies across sectors
+    plt.figure(figsize=(10, 8))
+
+    # Group smaller sectors into "Others"
+    pie_data = sector_stats.nlargest(8, 'weighted_percentage').copy()
+    others_sum = sector_stats['weighted_percentage'].sum() - pie_data['weighted_percentage'].sum()
+    others_row = pd.DataFrame({
+        'weighted_percentage': [others_sum],
+        'zero_companies': [sector_stats['zero_companies'].sum() - pie_data['zero_companies'].sum()]
+    }, index=['Other'])
+
+    pie_data = pd.concat([pie_data, others_row])
+
+    # Create pie chart
+    colors = plt.cm.Set3(np.linspace(0, 1, len(pie_data)))
+    wedges, texts, autotexts = plt.pie(pie_data['weighted_percentage'],
+                                       labels=pie_data.index,
+                                       autopct='%1.1f%%',
+                                       startangle=90,
+                                       colors=colors,
+                                       textprops={'fontsize': 11})
+
+    plt.title('Distribution of Zero-Reporting Companies\nAcross Sections (Weighted)',
+              fontsize=14, fontweight='bold', pad=20)
+
+    plt.tight_layout()
+    plt.savefig('section_distribution_pie.png', dpi=300, bbox_inches='tight')
+    plt.show()
+
+    # Print summary statistics
+    print("ANALYSIS SUMMARY")
+    print("=" * 50)
+    print(f"Total Companies: {len(df):,}")
+    print(f"Zero-Reporting Companies: {df['all_zeros'].sum():,}")
+    print(f"Overall Zero-Reporting Rate: {df['all_zeros'].mean() * 100:.1f}%")
+    print(f"Total Sections (Ateco codes): {len(sector_stats)}")
+
+    print(f"\nTop Sections by Weighted Contribution:")
+    top_weighted = sector_stats.nlargest(5, 'weighted_percentage')
+    for idx, row in top_weighted.iterrows():
+        print(f"  Section {idx}: {row['weighted_percentage']:.1f}% of total zeros")
+
+    print(f"\nTop Sections by Zero-Reporting Rate (min. 3 companies):")
+    top_rates = sector_stats[sector_stats['total_companies'] >= 3].nlargest(5, 'zero_percentage')
+    for idx, row in top_rates.iterrows():
+        print(f"  Section {idx}: {row['zero_percentage'] * 100:.1f}% zeros (n={int(row['total_companies'])})")
+
+def step2():
+    step2_df = pd.read_csv('step2.csv')
+    tidier_df = pd.read_csv('Tidier_Dataset.csv')
+
+    # Create a mapping dictionary for ATECO codes to letters and descriptions
+    ateco_mapping = {}
+    current_letter = None
+    current_desc = None
+
+    for _, row in step2_df.iterrows():
+        codice = str(row['Codice']).strip()
+        codice_desc = str(row['Codice_desc']).strip()
+
+        # If it's a letter row (A, B, C, etc.)
+        if len(codice) == 1 and codice.isalpha():
+            current_letter = codice
+            current_desc = codice_desc
+        # If it's a 2-digit code and we have a current letter
+        elif len(codice) == 2 and codice.isdigit() and current_letter is not None:
+            ateco_mapping[codice] = {
+                'letter': current_letter,
+                'description': current_desc
+            }
+
+    # Function to get ATECO letter and description based on 2-digit code
+    def get_ateco_info(ateco_code):
+        if pd.isna(ateco_code):
+            return None, None
+
+        # Convert to string and get first 2 digits
+        code_str = str(ateco_code).split('.')[0]  # Handle decimal codes
+        if len(code_str) >= 2:
+            two_digit = code_str[:2]
+            if two_digit in ateco_mapping:
+                return ateco_mapping[two_digit]['letter'], ateco_mapping[two_digit]['description']
+
+        return None, None
+
+    # Apply the function to get ATECO letter and description
+    tidier_df[['ateco_letter', 'ateco_description']] = tidier_df['Ateco'].apply(
+        lambda x: pd.Series(get_ateco_info(x))
+    )
+
+    # Reorder columns to place the new columns after 'Name'
+    cols = list(tidier_df.columns)
+    name_idx = cols.index('Name')
+
+    # Remove the new columns from their current position
+    cols.remove('ateco_letter')
+    cols.remove('ateco_description')
+
+    # Insert them after 'Name'
+    cols.insert(name_idx + 1, 'ateco_letter')
+    cols.insert(name_idx + 2, 'ateco_description')
+
+    tidier_df = tidier_df[cols]
+
+    # Rename the columns as requested
+    tidier_df = tidier_df.rename(columns={
+        'ateco_letter': 'ateco',
+        'ateco_description': 'atecoX'
+    })
+
+    # Save the updated dataset
+    tidier_df.to_csv('Tidier_Dataset.csv', index=False)
+
+def figure5_1(df):
+    # Set professional style with thinner grids
+    plt.style.use('seaborn-v0_8-whitegrid')
+    sns.set_palette("husl")
+
+    # Customize grid to be thinner and less aggressive
+    plt.rcParams['grid.linewidth'] = 0.3
+    plt.rcParams['grid.alpha'] = 0.5
+
+    # Identify reporting standard columns
+    reporting_cols = ['GRI_2022', 'ESRS_2022', 'SASB_2022',
+                      'GRI_2023', 'ESRS_2023', 'SASB_2023',
+                      'GRI_2024', 'ESRS_2024', 'SASB_2024']
+
+    # Create a flag for companies with all 9 values = 0
+    df['all_zeros'] = (df[reporting_cols].sum(axis=1) == 0)
+
+    # Analyze by Ateco sector (2-digit code)
+    df['ateco'] = df['ateco'].astype(str)
+
+    # Calculate statistics by sector
+    sector_stats = df.groupby('ateco').agg({
+        'all_zeros': ['count', 'sum', 'mean']
+    }).round(3)
+
+    # Flatten column names
+    sector_stats.columns = ['total_companies', 'zero_companies', 'zero_percentage']
+    sector_stats = sector_stats[sector_stats['total_companies'] >= 1]
+
+    # Calculate weighted percentage
+    total_zeros = sector_stats['zero_companies'].sum()
+    sector_stats['weighted_percentage'] = (sector_stats['zero_companies'] / total_zeros * 100).round(1)
+
+    # ANALYSIS 1: Weighted percentage of zero-reporting companies by sector
+
+    # Bar plot for Analysis 1
+    plt.figure(figsize=(12, 8))
+    top_sectors_weighted = sector_stats.nlargest(15, 'weighted_percentage')
+    bars1 = plt.bar(range(len(top_sectors_weighted)),
+                    top_sectors_weighted['weighted_percentage'],
+                    color='lightcoral', edgecolor='darkred', linewidth=0.5)
+
+    plt.title('Sections Contributing Most to Zero-Reporting Companies\n(Weighted by Percentage of Total Zeros)',
+              fontsize=14, fontweight='bold', pad=20)
+    plt.ylabel('Percentage of Total Zero-Reporting Companies (%)', fontsize=12)
+    plt.xlabel('Ateco Section Code', fontsize=12)
+
+    # Use only Ateco codes as labels
+    labels = [f"{idx}" for idx in top_sectors_weighted.index]
+    plt.xticks(range(len(top_sectors_weighted)), labels, rotation=45, ha='right', fontsize=11)
+
+    # Add value labels on bars
+    for bar, value in zip(bars1, top_sectors_weighted['weighted_percentage']):
+        plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.5,
+                 f'{value:.1f}%', ha='center', va='bottom', fontsize=10, fontweight='bold')
+
+    plt.tight_layout()
+    plt.savefig('weighted_percentage_by_section.png', dpi=300, bbox_inches='tight')
+    plt.show()
+
+    # Pie chart for Analysis 1
+    plt.figure(figsize=(10, 8))
+
+    # Group smaller sectors into "Others" for pie chart
+    pie_data1 = sector_stats.nlargest(8, 'weighted_percentage').copy()
+    others_sum1 = sector_stats['weighted_percentage'].sum() - pie_data1['weighted_percentage'].sum()
+    others_row1 = pd.DataFrame({
+        'weighted_percentage': [others_sum1],
+        'zero_companies': [sector_stats['zero_companies'].sum() - pie_data1['zero_companies'].sum()]
+    }, index=['Other'])
+
+    pie_data1 = pd.concat([pie_data1, others_row1])
+
+    # Create pie chart
+    colors1 = plt.cm.Set3(np.linspace(0, 1, len(pie_data1)))
+    wedges1, texts1, autotexts1 = plt.pie(pie_data1['weighted_percentage'],
+                                          labels=pie_data1.index,
+                                          autopct='%1.1f%%',
+                                          startangle=90,
+                                          colors=colors1,
+                                          textprops={'fontsize': 11})
+
+    plt.title('Distribution of Zero-Reporting Companies\nAcross Sections (Weighted)',
+              fontsize=14, fontweight='bold', pad=20)
+
+    plt.tight_layout()
+    plt.savefig('section_distribution_weighted_pie.png', dpi=300, bbox_inches='tight')
+    plt.show()
+
+    # ANALYSIS 2: Percentage of companies with zeros within each sector
+
+    # Bar plot for Analysis 2
+    plt.figure(figsize=(12, 8))
+    top_sectors_rate = sector_stats[sector_stats['total_companies'] >= 3].nlargest(15, 'zero_percentage')
+    bars2 = plt.bar(range(len(top_sectors_rate)),
+                    top_sectors_rate['zero_percentage'] * 100,
+                    color='skyblue', edgecolor='navy', linewidth=0.5)
+
+    plt.title('Sections with Highest Rate of Zero-Reporting Companies\n(Percentage within Section)',
+              fontsize=14, fontweight='bold', pad=20)
+    plt.ylabel('Percentage of Companies with Zero Reporting (%)', fontsize=12)
+    plt.xlabel('Ateco Section Code', fontsize=12)
+    plt.ylim(0, 110)
+
+    # Use only Ateco codes as labels - increased bottom margin to prevent overlap
+    labels2 = [f"{idx}" for idx in top_sectors_rate.index]
+    plt.xticks(range(len(top_sectors_rate)), labels2, rotation=45, ha='right', fontsize=11)
+
+    # Add value labels and sample size - adjusted positions to prevent overlap
+    for i, (bar, value, total) in enumerate(
+            zip(bars2, top_sectors_rate['zero_percentage'] * 100, top_sectors_rate['total_companies'])):
+        plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 2,
+                 f'{value:.0f}%', ha='center', va='bottom', fontsize=10, fontweight='bold')
+        # Move n= labels further down and make them smaller to prevent overlap with x-axis labels
+        plt.text(bar.get_x() + bar.get_width() / 2, -8,
+                 f'n={int(total)}', ha='center', va='top', fontsize=8, color='gray', alpha=0.8)
+
+    # Adjust subplot parameters to give more room at the bottom
+    plt.subplots_adjust(bottom=0.15)
+
+    plt.tight_layout()
+    plt.savefig('section_zero_rates.png', dpi=300, bbox_inches='tight')
+    plt.show()
+
+    # Pie chart for Analysis 2 - Showing more sectors without "Others" category
+    plt.figure(figsize=(12, 10))
+
+    # Get top sectors by zero rate (with at least 3 companies) - show more sectors
+    top_pie_sectors = sector_stats[sector_stats['total_companies'] >= 3].nlargest(12, 'zero_percentage')
+
+    # Create custom labels showing sector code, rate, and sample size
+    def make_rate_label(idx, row):
+        return f"Section {idx}\n{row['zero_percentage'] * 100:.0f}% (n={int(row['total_companies'])})"
+
+    labels_pie2 = [make_rate_label(idx, row) for idx, row in top_pie_sectors.iterrows()]
+
+    # Use the zero percentage as the size for the pie chart
+    sizes = top_pie_sectors['zero_percentage'] * 100
+
+    # Create a more distinct color palette
+    colors2 = plt.cm.tab20(np.linspace(0, 1, len(top_pie_sectors)))
+
+    # Print summary statistics
+    print("ANALYSIS SUMMARY")
+    print("=" * 50)
+    print(f"Total Companies: {len(df):,}")
+    print(f"Zero-Reporting Companies: {df['all_zeros'].sum():,}")
+    print(f"Overall Zero-Reporting Rate: {df['all_zeros'].mean() * 100:.1f}%")
+    print(f"Total Sections (Ateco codes): {len(sector_stats)}")
+
+    print(f"\nTop Section by Weighted Contribution:")
+    top_weighted = sector_stats.nlargest(5, 'weighted_percentage')
+    for idx, row in top_weighted.iterrows():
+        print(f"  Section {idx}: {row['weighted_percentage']:.1f}% of total zeros")
+
+    print(f"\nTop Sections by Zero-Reporting Rate (min. 3 companies):")
+    top_rates = sector_stats[sector_stats['total_companies'] >= 3].nlargest(5, 'zero_percentage')
+    for idx, row in top_rates.iterrows():
+        print(f"  Section {idx}: {row['zero_percentage'] * 100:.1f}% zeros (n={int(row['total_companies'])})")
+
+    # Additional statistics about high zero rate sectors
+    print(f"\nSections with 100% Zero-Reporting (any sample size):")
+    hundred_percent_sectors = sector_stats[sector_stats['zero_percentage'] == 1]
+    for idx, row in hundred_percent_sectors.iterrows():
+        print(f"  Section {idx}: {int(row['total_companies'])} companies")
+
+def create_gri_to_esrs_sasb_analysis(df):
+    """
+    Create multiple visualizations for companies that had GRI in 2022/2023
+    and now have SASB or ESRS in 2024
+    """
+
+    # Filter companies: GRI in 2022 OR 2023, AND (SASB OR ESRS in 2024)
+    filtered_companies = df[
+        ((df['GRI_2022'] == 1) | (df['GRI_2023'] == 1)) &
+        ((df['SASB_2024'] == 1) | (df['ESRS_2024'] == 1))
+        ].copy()
+
+    print(f"Total companies meeting criteria: {len(filtered_companies)}")
+
+    # Create adoption categories for 2024
+    filtered_companies['Adoption_2024'] = 'None'
+    filtered_companies.loc[
+        (filtered_companies['ESRS_2024'] == 1) & (filtered_companies['SASB_2024'] == 0), 'Adoption_2024'
+    ] = 'ESRS Only'
+    filtered_companies.loc[
+        (filtered_companies['SASB_2024'] == 1) & (filtered_companies['ESRS_2024'] == 0), 'Adoption_2024'
+    ] = 'SASB Only'
+    filtered_companies.loc[
+        (filtered_companies['ESRS_2024'] == 1) & (filtered_companies['SASB_2024'] == 1), 'Adoption_2024'
+    ] = 'Both'
+
+    # ANALYSIS 1: 2-digit ATECO codes
+    create_ateco_2digit_analysis(filtered_companies)
+
+    # ANALYSIS 2: 1-character ATECO codes
+    create_ateco_1char_analysis(filtered_companies)
+
+    # ANALYSIS 3: Additional insights
+    create_additional_insights(filtered_companies)
+
+def create_ateco_2digit_analysis(df):
+    """Create visualizations for 2-digit ATECO codes"""
+
+    # Group by 2-digit ATECO and adoption type
+    ateco_2digit_counts = df.groupby(['Ateco', 'Adoption_2024']).size().unstack(fill_value=0)
+
+    # Calculate totals and sort
+    ateco_2digit_counts['Total'] = ateco_2digit_counts.sum(axis=1)
+    ateco_2digit_counts = ateco_2digit_counts.sort_values('Total', ascending=False)
+
+    # Plot 1: Stacked bar chart for top 15 2-digit ATECO codes
+    plt.figure(figsize=(15, 8))
+    top_ateco_2digit = ateco_2digit_counts.head(15)
+
+    colors = ['#2E86AB', '#A23B72', '#F18F01']  # ESRS Only, SASB Only, Both
+
+    bars = top_ateco_2digit[['ESRS Only', 'SASB Only', 'Both']].plot(
+        kind='bar',
+        stacked=True,
+        color=colors,
+        edgecolor='white',
+        linewidth=0.5
+    )
+
+    plt.title('Distribution of Companies with GRI (2022/2023) and ESRS/SASB (2024)\nby 2-Digit ATECO Code (Top 15)',
+              fontsize=14, fontweight='bold', pad=20)
+    plt.xlabel('2-Digit ATECO Code', fontsize=12, fontweight='bold')
+    plt.ylabel('Number of Companies', fontsize=12, fontweight='bold')
+    plt.legend(title='2024 Framework Adoption', title_fontsize=10, fontsize=9)
+    plt.xticks(rotation=45, ha='right')
+    plt.grid(axis='y', alpha=0.3, linestyle='--')
+
+    # Add value labels on bars
+    for container in bars.containers:
+        bars.bar_label(container, label_type='center', fontsize=8, color='white', fontweight='bold')
+
+    plt.tight_layout()
+    plt.savefig('gri_to_esrs_sasb_2digit_stacked.png', dpi=300, bbox_inches='tight')
+    plt.show()
+
+    # Plot 2: Percentage stacked bar chart
+    plt.figure(figsize=(15, 8))
+
+    # Calculate percentages
+    top_ateco_percentage = top_ateco_2digit[['ESRS Only', 'SASB Only', 'Both']].div(
+        top_ateco_2digit[['ESRS Only', 'SASB Only', 'Both']].sum(axis=1), axis=0
+    ) * 100
+
+    ax = top_ateco_percentage.plot(
+        kind='bar',
+        stacked=True,
+        color=colors,
+        edgecolor='white',
+        linewidth=0.5
+    )
+
+    plt.title(
+        'Percentage Distribution of 2024 Framework Adoption\nfor Companies with GRI (2022/2023) by 2-Digit ATECO Code',
+        fontsize=14, fontweight='bold', pad=20)
+    plt.xlabel('2-Digit ATECO Code', fontsize=12, fontweight='bold')
+    plt.ylabel('Percentage (%)', fontsize=12, fontweight='bold')
+    plt.legend(title='2024 Framework Adoption', title_fontsize=10, fontsize=9)
+    plt.xticks(rotation=45, ha='right')
+    plt.grid(axis='y', alpha=0.3, linestyle='--')
+    plt.ylim(0, 100)
+
+    plt.tight_layout()
+    plt.savefig('gri_to_esrs_sasb_2digit_percentage.png', dpi=300, bbox_inches='tight')
+    plt.show()
+
+    # Plot 3: Donut chart for overall adoption distribution
+    overall_adoption = df['Adoption_2024'].value_counts()
+
+    plt.figure(figsize=(10, 8))
+    colors_donut = ['#2E86AB', '#A23B72', '#F18F01']
+
+    wedges, texts, autotexts = plt.pie(
+        overall_adoption.values,
+        labels=overall_adoption.index,
+        autopct='%1.1f%%',
+        startangle=90,
+        colors=colors_donut,
+        pctdistance=0.85
+    )
+
+    # Draw a circle in the center to make it a donut
+    centre_circle = plt.Circle((0, 0), 0.70, fc='white')
+    plt.gca().add_artist(centre_circle)
+
+    plt.title('Overall 2024 Framework Adoption Distribution\nfor Companies with GRI (2022/2023)',
+              fontsize=14, fontweight='bold', pad=20)
+
+    # Improve text appearance
+    for autotext in autotexts:
+        autotext.set_color('white')
+        autotext.set_fontweight('bold')
+        autotext.set_fontsize(10)
+
+    plt.tight_layout()
+    plt.savefig('gri_to_esrs_sasb_overall_donut.png', dpi=300, bbox_inches='tight')
+    plt.show()
+
+def create_ateco_1char_analysis(df):
+    """Create visualizations for 1-character ATECO codes"""
+
+    # Group by 1-character ATECO and adoption type
+    ateco_1char_counts = df.groupby(['ateco', 'Adoption_2024']).size().unstack(fill_value=0)
+
+    # Calculate totals and sort
+    ateco_1char_counts['Total'] = ateco_1char_counts.sum(axis=1)
+    ateco_1char_counts = ateco_1char_counts.sort_values('Total', ascending=False)
+
+    # Plot 1: Grouped bar chart for 1-character ATECO
+    plt.figure(figsize=(12, 8))
+
+    x = np.arange(len(ateco_1char_counts))
+    width = 0.25
+
+    colors = ['#2E86AB', '#A23B72', '#F18F01']  # ESRS Only, SASB Only, Both
+
+    bars1 = plt.bar(x - width, ateco_1char_counts.get('ESRS Only', pd.Series([0] * len(ateco_1char_counts))),
+                    width, label='ESRS Only', color=colors[0], edgecolor='white')
+    bars2 = plt.bar(x, ateco_1char_counts.get('SASB Only', pd.Series([0] * len(ateco_1char_counts))),
+                    width, label='SASB Only', color=colors[1], edgecolor='white')
+    bars3 = plt.bar(x + width, ateco_1char_counts.get('Both', pd.Series([0] * len(ateco_1char_counts))),
+                    width, label='Both', color=colors[2], edgecolor='white')
+
+    plt.title('Distribution of Companies with GRI (2022/2023) and ESRS/SASB (2024)\nby 1-Character ATECO Section',
+              fontsize=14, fontweight='bold', pad=20)
+    plt.xlabel('ATECO Section', fontsize=12, fontweight='bold')
+    plt.ylabel('Number of Companies', fontsize=12, fontweight='bold')
+    plt.xticks(x, ateco_1char_counts.index)
+    plt.legend()
+    plt.grid(axis='y', alpha=0.3, linestyle='--')
+
+    # Add value labels on bars
+    for bars in [bars1, bars2, bars3]:
+        for bar in bars:
+            height = bar.get_height()
+            if height > 0:
+                plt.text(bar.get_x() + bar.get_width() / 2., height,
+                         f'{int(height)}', ha='center', va='bottom', fontsize=9, fontweight='bold')
+
+    plt.tight_layout()
+    plt.savefig('gri_to_esrs_sasb_1char_grouped.png', dpi=300, bbox_inches='tight')
+    plt.show()
+
+    # Plot 2: Heatmap for 1-character ATECO
+    plt.figure(figsize=(10, 6))
+
+    # Prepare data for heatmap
+    heatmap_data = ateco_1char_counts[['ESRS Only', 'SASB Only', 'Both']].fillna(0)
+
+    sns.heatmap(
+        heatmap_data.T,  # Transpose to have adoption types as rows
+        annot=True,
+        fmt='g',
+        cmap='YlOrRd',
+        cbar_kws={'label': 'Number of Companies'},
+        linewidths=0.5,
+        linecolor='white'
+    )
+
+    plt.title('Heatmap: 2024 Framework Adoption by ATECO Section\nfor Companies with GRI (2022/2023)',
+              fontsize=14, fontweight='bold', pad=20)
+    plt.xlabel('ATECO Section', fontsize=12, fontweight='bold')
+    plt.ylabel('2024 Framework Adoption', fontsize=12, fontweight='bold')
+
+    plt.tight_layout()
+    plt.savefig('gri_to_esrs_sasb_1char_heatmap.png', dpi=300, bbox_inches='tight')
+    plt.show()
+
+    # Plot 3: Pie chart for 1-character ATECO distribution
+    plt.figure(figsize=(12, 8))
+
+    section_totals = ateco_1char_counts['Total']
+
+    # Create pie chart
+    colors_pie = plt.cm.Set3(np.linspace(0, 1, len(section_totals)))
+
+    wedges, texts, autotexts = plt.pie(
+        section_totals.values,
+        labels=section_totals.index,
+        autopct='%1.1f%%',
+        startangle=90,
+        colors=colors_pie
+    )
+
+    plt.title('Distribution of Companies with GRI (2022/2023) and ESRS/SASB (2024)\nby ATECO Section',
+              fontsize=14, fontweight='bold', pad=20)
+
+    # Improve text appearance
+    for autotext in autotexts:
+        autotext.set_color('black')
+        autotext.set_fontweight('bold')
+
+    plt.tight_layout()
+    plt.savefig('gri_to_esrs_sasb_1char_pie.png', dpi=300, bbox_inches='tight')
+    plt.show()
+
+def create_additional_insights(df):
+    """Create additional insightful visualizations"""
+
+    # Insight 1: Transition patterns from GRI years
+    df['GRI_Pattern'] = 'No GRI'
+    df.loc[(df['GRI_2022'] == 1) & (df['GRI_2023'] == 0), 'GRI_Pattern'] = 'GRI 2022 Only'
+    df.loc[(df['GRI_2022'] == 0) & (df['GRI_2023'] == 1), 'GRI_Pattern'] = 'GRI 2023 Only'
+    df.loc[(df['GRI_2022'] == 1) & (df['GRI_2023'] == 1), 'GRI_Pattern'] = 'GRI Both Years'
+
+    # Cross-tabulation: GRI pattern vs 2024 adoption
+    cross_tab = pd.crosstab(df['GRI_Pattern'], df['Adoption_2024'])
+
+    # Plot: Stacked bar chart of GRI patterns vs 2024 adoption
+    plt.figure(figsize=(12, 8))
+
+    colors = ['#2E86AB', '#A23B72', '#F18F01']  # ESRS Only, SASB Only, Both
+
+    ax = cross_tab.plot(kind='bar', stacked=True, color=colors, figsize=(12, 8))
+
+    plt.title('GRI Adoption Pattern (2022-2023) vs 2024 Framework Adoption',
+              fontsize=14, fontweight='bold', pad=20)
+    plt.xlabel('GRI Adoption Pattern', fontsize=12, fontweight='bold')
+    plt.ylabel('Number of Companies', fontsize=12, fontweight='bold')
+    plt.legend(title='2024 Framework Adoption', title_fontsize=10, fontsize=9)
+    plt.xticks(rotation=45, ha='right')
+    plt.grid(axis='y', alpha=0.3, linestyle='--')
+
+    # Add value labels on bars
+    for container in ax.containers:
+        ax.bar_label(container, label_type='center', fontsize=9, color='white', fontweight='bold')
+
+    plt.tight_layout()
+    plt.savefig('gri_pattern_vs_2024_adoption.png', dpi=300, bbox_inches='tight')
+    plt.show()
+
+    # Insight 2: Summary statistics
+    print("\n" + "=" * 60)
+    print("SUMMARY STATISTICS")
+    print("=" * 60)
+
+    total_companies = len(df)
+    print(f"Total companies analyzed: {total_companies}")
+
+    adoption_summary = df['Adoption_2024'].value_counts()
+    print(f"\n2024 Framework Adoption:")
+    for adoption_type, count in adoption_summary.items():
+        percentage = (count / total_companies) * 100
+        print(f"  {adoption_type}: {count} companies ({percentage:.1f}%)")
+
+    gri_pattern_summary = df['GRI_Pattern'].value_counts()
+    print(f"\nGRI Adoption Pattern (2022-2023):")
+    for pattern, count in gri_pattern_summary.items():
+        percentage = (count / total_companies) * 100
+        print(f"  {pattern}: {count} companies ({percentage:.1f}%)")
+
+    # Most common ATECO sections
+    print(f"\nMost common ATECO sections (1-character):")
+    ateco_section_counts = df['ateco'].value_counts().head(5)
+    for section, count in ateco_section_counts.items():
+        percentage = (count / total_companies) * 100
+        print(f"  Section {section}: {count} companies ({percentage:.1f}%)")
+
+    print(f"\nMost common 2-digit ATECO codes:")
+    ateco_2digit_counts = df['Ateco'].value_counts().head(5)
+    for code, count in ateco_2digit_counts.items():
+        percentage = (count / total_companies) * 100
+        print(f"  Code {code}: {count} companies ({percentage:.1f}%)")
 
 
 
@@ -886,19 +1699,19 @@ path1 = "Database Ufficiale.csv"       #Old naming for DF processing
 df1= pd.read_csv(path1)
 
 
-Reshaping the database with GRI, ESRS, SASB and widening the columns of the previous indexes into the three years
-and creating a new cleaner csv and generating in csv and excel version
+#Reshaping the database with GRI, ESRS, SASB and widening the columns of the previous indexes into the three years
+# and creating a new cleaner csv and generating in csv and excel version
 df = reshape_database(df1)
 
 
-Creating a table of piechart with the Usage or not of each index
+#Creating a table of piechart with the Usage or not of each index
 pie_chart_per_year_per_standard_index(df)
 
-Computation of counts and percentages of the Industries with all 0s and 1s for each category throughout the 3 years
-and the computation of counts and percentage of Industries which presented either the SASB or the ESRS declaration in 2024
+#Computation of counts and percentages of the Industries with all 0s and 1s for each category throughout the 3 years
+# and the computation of counts and percentage of Industries which presented either the SASB or the ESRS declaration in 2024
 counts_and_percentages_and_law_check(df)
 
-Adding ateco identifiers
+#Adding ateco identifiers
 df_Extra = pd.read_csv('ATECO_codes.csv')
 adding_new_Ateco_identifiers(df_Extra, df)
 
@@ -915,12 +1728,20 @@ print(df.columns.to_list())
 df.to_csv('Tidier_Dataset.csv', index=False)
 df.to_excel('Tidier_Dataset.xlsx', index=False)
 
-Making of the first figure of who has all 0s
+#Second reshaping of the df
+step1(df)
+step2
+
 figure1(df)
+figure1_1(df)
 figure2(df)
+figure2_1(df)
 figure3(df)
 figure4(df)
 figure5(df)
+
+# Run the analysis of companies with 1 in GRI_2022 or GRI_2023 and 1 in either SASB_2024 or ESRS_2024 or both
+create_gri_to_esrs_sasb_analysis(df)
 
 START OF THE CODE
 path = "Tidier_Dataset.csv"
@@ -931,15 +1752,8 @@ df = pd.read_csv(path)
 path = "Tidier_Dataset.csv"
 df = pd.read_csv(path)
 
-df = df.rename(columns={
-        'ateco_section': 'ateco',
-        'ateco_section': 'atecoX'})
-# Updating the csv and excel
-df.to_csv('Tidier_Dataset.csv', index=False)
-df.to_excel('Tidier_Dataset.xlsx', index=False)
+create_gri_to_esrs_sasb_analysis(df)
 
-
-
-#DEBUG
+# DEBUG
 
 
