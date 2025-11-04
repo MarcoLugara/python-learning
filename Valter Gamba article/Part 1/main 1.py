@@ -138,7 +138,7 @@ def counts_and_percentages_and_law_check(df):
           some_1s_by_law_in_2024, "namely", some_1s_by_law_in_2024_perc, "%")
 
 def adding_new_Ateco_identifiers(df_Extra, df):
-    df_Extra = pd.read_csv('ATECO_codes.csv')
+    df_Extra = pd.read_csv('../Part 2/ATECO_codes.csv')
     df_Extra = df_Extra.rename(columns={
         'Codice Ateco': 'Codice',
         'Titolo Ateco 2007 aggiornamento 2022': 'Codice_desc'}
@@ -836,7 +836,7 @@ def figure5(df):
         print(f"  Sector {idx}: {int(row['total_companies'])} companies")
 
 def step1(df_Extra, df):
-    df_Extra = pd.read_csv('ATECO_codes.csv')
+    df_Extra = pd.read_csv('../Part 2/ATECO_codes.csv')
     df_Extra = df_Extra.rename(columns={
         'Codice Ateco': 'Codice',
         'Titolo Ateco 2007 aggiornamento 2022': 'Codice_desc'}
