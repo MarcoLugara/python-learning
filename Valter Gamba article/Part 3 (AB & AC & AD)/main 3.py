@@ -161,6 +161,11 @@ def comprehensive_database_reshaping(original_csv_path, ateco_codes_csv_path, ou
              'Field2_2022', 'Field2_2023', 'Field2_2024',
              'Field3_2022', 'Field3_2023', 'Field3_2024',]]
 
+    #Remove AA1000 columns
+    all_columns = df.columns.tolist()
+    columns_to_keep = [col for col in all_columns if col not in ['AA1000_2022', 'AA1000_2023', 'AA1000_2024']]
+    df = df[columns_to_keep]
+
     df.to_csv('Tidier_Dataset.csv', index=False)
     df.to_excel('Tidier_Dataset.xlsx', index=False)
     # Instead of saving, return the df
