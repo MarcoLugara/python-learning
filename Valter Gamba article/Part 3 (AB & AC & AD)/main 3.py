@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import re
+import matplotlib.pyplot as plt
 
 
 def comprehensive_database_reshaping(original_csv_path, ateco_codes_csv_path, output_csv_path='Tidier_Dataset.csv',
@@ -177,5 +178,108 @@ df = comprehensive_database_reshaping(
     "ATECO_codes.csv"
 )
 
-# Print the final dataset
-print(df.columns)
+# Load the data
+df = pd.read_csv('Tidier_Dataset.csv')
+
+# Extract ATECO letter from the first column (it's the first character)
+df['ateco_letter'] = df['ateco'].str[0]
+
+# Create binary indicators for each year - 1 if any field has 1, 0 otherwise
+df['has_ones_2022'] = ((df['Field1_2022'] == 1) | (df['Field2_2022'] == 1) | (df['Field3_2022'] == 1)).astype(int)
+df['has_ones_2023'] = ((df['Field1_2023'] == 1) | (df['Field2_2023'] == 1) | (df['Field3_2023'] == 1)).astype(int)
+df['has_ones_2024'] = ((df['Field1_2024'] == 1) | (df['Field2_2024'] == 1) | (df['Field3_2024'] == 1)).astype(int)
+
+# Calculate totals per ATECO letter for each year
+yearly_totals = df.groupby('ateco_letter').agg({
+    'has_ones_2022': 'sum',
+    'has_ones_2023': 'sum',
+    'has_ones_2024': 'sum',
+    'Name': 'count'  # Total companies per sector
+}).rename(columns={'Name': 'total_companies'})
+
+# Calculate percentages
+for year in ['2022', '2023', '2024']:
+    yearly_totals[f'percentage_{year}'] = (yearly_totals[f'has_ones_{year}'] / yearly_totals['total_companies'] * 100).round(1)
+
+# Sort by total companies for better visualization
+yearly_totals = yearly_totals.sort_values('total_companies', ascending=False)
+
+print("COMPANIES WITH AT LEAST ONE '1' BY ATECO SECTOR")
+print("="*50)
+print(yearly_totals[['total_companies', 'has_ones_2022', 'has_ones_2023', 'has_ones_2024',
+                   'percentage_2022', 'percentage_2023', 'percentage_2024']])
+
+# Create histograms
+fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+fig.suptitle('Distribution of Companies with at least one "1" by ATECO Sector (2022-2024)', fontsize=16, fontweight='bold')
+
+# Year 2022
+axes[0,0].bar(yearly_totals.index, yearly_totals['has_ones_2022'], color='skyblue', alpha=0.7)
+axes[0,0].set_title('2022 - Companies with ≥1 "1"', fontweight='bold')
+axes[0,0].set_ylabel('Number of Companies')
+axes[0,0].tick_params(axis='x', rotation=45)
+
+# Year 2023
+axes[0,1].bar(yearly_totals.index, yearly_totals['has_ones_2023'], color='lightgreen', alpha=0.7)
+axes[0,1].set_title('2023 - Companies with ≥1 "1"', fontweight='bold')
+axes[0,1].set_ylabel('Number of Companies')
+axes[0,1].tick_params(axis='x', rotation=45)
+
+# Year 2024
+axes[1,0].bar(yearly_totals.index, yearly_totals['has_ones_2024'], color='salmon', alpha=0.7)
+axes[1,0].set_title('2024 - Companies with ≥1 "1"', fontweight='bold')
+axes[1,0].set_ylabel('Number of Companies')
+axes[1,0].tick_params(axis='x', rotation=45)
+
+# Total across all years
+total_ones = yearly_totals['has_ones_2022'] + yearly_totals['has_ones_2023'] + yearly_totals['has_ones_2024']
+axes[1,1].bar(yearly_totals.index, total_ones, color='gold', alpha=0.7)
+axes[1,1].set_title('Total "1"s across 2022-2024', fontweight='bold')
+axes[1,1].set_ylabel('Cumulative Count')
+axes[1,1].tick_params(axis='x', rotation=45)
+
+plt.tight_layout()
+plt.savefig('INSERIRE TITOLO ADEGUATO (2022-2024).png')
+
+# Additional analysis: High performers vs Low performers
+print("\n" + "="*60)
+print("SECTOR PERFORMANCE ANALYSIS")
+print("="*60)
+
+# Calculate average percentage across years
+yearly_totals['avg_percentage'] = yearly_totals[['percentage_2022', 'percentage_2023', 'percentage_2024']].mean(axis=1)
+
+# Define performance tiers
+high_performers = yearly_totals[yearly_totals['avg_percentage'] > 60]
+medium_performers = yearly_totals[(yearly_totals['avg_percentage'] >= 30) & (yearly_totals['avg_percentage'] <= 60)]
+low_performers = yearly_totals[yearly_totals['avg_percentage'] < 30]
+
+print(f"\nHIGH PERFORMERS (Avg > 60% companies with ones):")
+print(high_performers[['total_companies', 'avg_percentage']].sort_values('avg_percentage', ascending=False))
+
+print(f"\nMEDIUM PERFORMERS (30-60% companies with ones):")
+print(medium_performers[['total_companies', 'avg_percentage']].sort_values('avg_percentage', ascending=False))
+
+print(f"\nLOW PERFORMERS (<30% companies with ones):")
+print(low_performers[['total_companies', 'avg_percentage']].sort_values('avg_percentage', ascending=False))
+
+# Trend analysis
+print(f"\n" + "="*60)
+print("TREND ANALYSIS 2022-2024")
+print("="*60)
+
+trend_analysis = []
+for letter in yearly_totals.index:
+    pct_2022 = yearly_totals.loc[letter, 'percentage_2022']
+    pct_2024 = yearly_totals.loc[letter, 'percentage_2024']
+    trend = "↑ Improving" if pct_2024 > pct_2022 + 5 else "↓ Declining" if pct_2024 < pct_2022 - 5 else "→ Stable"
+    trend_analysis.append({
+        'Sector': letter,
+        '2022': f"{pct_2022}%",
+        '2024': f"{pct_2024}%",
+        'Trend': trend,
+        'Change': f"{(pct_2024 - pct_2022):+.1f}%"
+    })
+
+trend_df = pd.DataFrame(trend_analysis)
+print(trend_df)
