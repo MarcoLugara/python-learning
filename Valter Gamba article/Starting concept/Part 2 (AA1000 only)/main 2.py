@@ -4,7 +4,7 @@ import re
 import matplotlib.pyplot as plt
 
 
-def comprehensive_database_reshaping(original_csv_path, ateco_codes_csv_path, output_csv_path='Tidier_Dataset.csv',
+def comprehensive_database_reshaping(original_csv_path, ateco_codes_csv_path, output_csv_path='Starting_Dataset.csv',
                                      output_excel_path='Tidier_Dataset.xlsx'):
     """
     Comprehensive function to perform all database reshaping steps in a single function:
@@ -18,7 +18,7 @@ def comprehensive_database_reshaping(original_csv_path, ateco_codes_csv_path, ou
     Parameters:
     - original_csv_path: Path to 'Database Ufficiale.csv'
     - ateco_codes_csv_path: Path to 'ATECO_codes.csv'
-    - output_csv_path: Path to save the final CSV (default: 'Tidier_Dataset.csv')
+    - output_csv_path: Path to save the final CSV (default: 'Starting_Dataset.csv')
     - output_excel_path: Path to save the final Excel (default: 'Tidier_Dataset.xlsx')
 
     Returns:
@@ -150,7 +150,7 @@ def comprehensive_database_reshaping(original_csv_path, ateco_codes_csv_path, ou
     df = df[['Name', 'ateco', 'atecoX', 'Ateco', 'AtecoX', 'ATECO', 'ATECOx',
              'AA1000_2022', 'AA1000_2023', 'AA1000_2024']]
 
-    df.to_csv('Tidier_Dataset.csv', index=False)
+    df.to_csv('Starting_Dataset.csv', index=False)
     df.to_excel('Tidier_Dataset.xlsx', index=False)
     # Instead of saving, return the df
     return df

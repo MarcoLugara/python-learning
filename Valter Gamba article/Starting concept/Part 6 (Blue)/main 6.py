@@ -12,7 +12,7 @@ import datetime
 import os
 
 
-def comprehensive_database_reshaping(original_csv_path, ateco_codes_csv_path, output_csv_path='Tidier_Dataset.csv',
+def comprehensive_database_reshaping(original_csv_path, ateco_codes_csv_path, output_csv_path='Starting_Dataset.csv',
                                      output_excel_path='Tidier_Dataset.xlsx'):
     """
     Comprehensive function to perform all database reshaping steps in a single function:
@@ -26,7 +26,7 @@ def comprehensive_database_reshaping(original_csv_path, ateco_codes_csv_path, ou
     Parameters:
     - original_csv_path: Path to 'Database Ufficiale.csv'
     - ateco_codes_csv_path: Path to 'ATECO_codes.csv'
-    - output_csv_path: Path to save the final CSV (default: 'Tidier_Dataset.csv')
+    - output_csv_path: Path to save the final CSV (default: 'Starting_Dataset.csv')
     - output_excel_path: Path to save the final Excel (default: 'Tidier_Dataset.xlsx')
 
     Returns:
@@ -42,11 +42,9 @@ def comprehensive_database_reshaping(original_csv_path, ateco_codes_csv_path, ou
         'AZIENDE SUDDIVISE PER CODICE ATECO': 'Name',
         'ATECO 2007\r\ncodice': 'ATECO',
         'ATECO 2007\r\ndescrizione': 'ATECOx',
-        'QUESTIONARI' : 'Field1',
-        'FOCUS GROUP' : 'Field2',
-        'WORKSHOP' : 'Field3',
-        'GROUP MEETING': 'Field4',
-        'INCONTRI PERIODICI' : 'Field5'
+        'INTRANET AZIENDALE ' : 'Field1',
+        'NEWSLETTERS' : 'Field2',
+        'COMUNICATI STAMPA' : 'Field3'
     })
 
     companies = df2['Name'].unique()
@@ -66,19 +64,15 @@ def comprehensive_database_reshaping(original_csv_path, ateco_codes_csv_path, ou
                 row_data[f'Field1_{year}'] = year_data['Field1'].iloc[0]
                 row_data[f'Field2_{year}'] = year_data['Field2'].iloc[0]
                 row_data[f'Field3_{year}'] = year_data['Field3'].iloc[0]
-                row_data[f'Field4_{year}'] = year_data['Field4'].iloc[0]
-                row_data[f'Field5_{year}'] = year_data['Field5'].iloc[0]
             else:
                 row_data[f'Field1_{year}'] = 0
                 row_data[f'Field2_{year}'] = 0
                 row_data[f'Field3_{year}'] = 0
-                row_data[f'Field4_{year}'] = 0
-                row_data[f'Field5_{year}'] = 0
         result_data.append(row_data)
     df = pd.DataFrame(result_data)
     df = df.replace('#N/A', np.nan)
     #CAN CHANGE
-    indicator_cols = [col for col in df.columns if col.startswith(('Field1_', 'Field2_', 'Field3_', 'Field4_', 'Field5_'))]
+    indicator_cols = [col for col in df.columns if col.startswith(('Field1_', 'Field2_', 'Field3_'))]
     for col in indicator_cols:
         df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
     df['ATECO'] = pd.to_numeric(df['ATECO'], errors='coerce').fillna(0).astype(int)
@@ -102,7 +96,7 @@ def comprehensive_database_reshaping(original_csv_path, ateco_codes_csv_path, ou
     df['AtecoX'] = df['Ateco'].map(mapping_dict)
     new_cols = df[['Ateco', 'AtecoX']]
 #THIS CAN CHANGE: 3+#(added columns*3)
-    df = df.drop(df.columns[18:], axis=1)
+    df = df.drop(df.columns[12:], axis=1)
     df = pd.concat([df.iloc[:, :1], new_cols, df.iloc[:, 1:]], axis=1)
 
     # Process ATECO codes (step1) in memory
@@ -168,24 +162,24 @@ def comprehensive_database_reshaping(original_csv_path, ateco_codes_csv_path, ou
     df = df[['Name', 'ateco', 'atecoX', 'Ateco', 'AtecoX', 'ATECO', 'ATECOx',
              'Field1_2022', 'Field1_2023', 'Field1_2024',
              'Field2_2022', 'Field2_2023', 'Field2_2024',
-             'Field3_2022', 'Field3_2023', 'Field3_2024',
-             'Field4_2022', 'Field4_2023', 'Field4_2024',
-             'Field5_2022', 'Field5_2023', 'Field5_2024'
+             'Field3_2022', 'Field3_2023', 'Field3_2024'
              ]]
 
-    df.to_csv('Tidier_Dataset.csv', index=False)
+    df.to_csv('Starting_Dataset.csv', index=False)
     df.to_excel('Tidier_Dataset.xlsx', index=False)
     # Instead of saving, return the df
     return df
 
 
+'''
 df = comprehensive_database_reshaping(
     "Database Ufficiale.csv",
     "ATECO_codes.csv"
 )
+'''
 
 # =============================================================================
-# MAIN ANALYSIS CODE - ADJUSTED FOR YOUR DATASET WITH 5 FIELDS
+# MAIN ANALYSIS CODE
 # =============================================================================
 
 # Load the data from your provided CSV
@@ -194,25 +188,23 @@ df = pd.read_csv('Tidier_Dataset.csv')
 # Extract ATECO letter from the first column
 df['ateco_letter'] = df['ateco'].str[0]
 
-# Calculate number of ones for each company each year (5 fields)
+# Calculate number of ones for each company each year (3 fields)
 for year in ['2022', '2023', '2024']:
-    df[f'count_ones_{year}'] = df[[f'Field1_{year}', f'Field2_{year}',
-                                   f'Field3_{year}', f'Field4_{year}',
-                                   f'Field5_{year}']].sum(axis=1)
+    df[f'count_ones_{year}'] = df[[f'Field1_{year}', f'Field2_{year}', f'Field3_{year}']].sum(axis=1)
 
 # Create detailed breakdown by ATECO letter and count of ones
 detailed_breakdown = pd.DataFrame()
 
 for year in ['2022', '2023', '2024']:
     year_data = df.groupby(['ateco_letter', f'count_ones_{year}']).size().unstack(fill_value=0)
-    year_data = year_data.reindex(columns=[0, 1, 2, 3, 4, 5], fill_value=0)
+    year_data = year_data.reindex(columns=list(range(0, 4)), fill_value=0)  # 0 to 3 ones
 
-    # Calculate total companies - only sum the count columns (0-5)
-    year_data['total_companies'] = year_data[[0, 1, 2, 3, 4, 5]].sum(axis=1)
+    # Calculate total companies - only sum the count columns (0-3)
+    year_data['total_companies'] = year_data[list(range(0, 4))].sum(axis=1)
     year_data['year'] = year
 
     # Calculate percentages for each count
-    for count in [0, 1, 2, 3, 4, 5]:
+    for count in range(0, 4):  # 0 to 3
         if count in year_data.columns:
             year_data[f'pct_{count}'] = (year_data[count] / year_data['total_companies'] * 100).round(1)
 
@@ -224,14 +216,14 @@ detailed_breakdown = detailed_breakdown.reset_index()
 # Get sector order by total companies (for consistent ordering)
 sector_order = df['ateco_letter'].value_counts().index
 
-# Color scheme for 1-5 ones (excluding 0)
-bar_colors = ['#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#fab1a0']
+# Color scheme for 1-3 ones (excluding 0)
+bar_colors = ['#4ecdc4', '#45b7d1', '#96ceb4'][:3]  # 3 colors
 
 # =============================================================================
 # IMAGE 1: 2022 - PERCENTAGE AND ABSOLUTE VALUES
 # =============================================================================
-fig1, (ax1_pct, ax1_abs) = plt.subplots(1, 2, figsize=(22, 8))
-fig1.suptitle('2022 - Distribution of Companies with at least one "1"', fontsize=16, fontweight='bold')
+fig1, (ax1_pct, ax1_abs) = plt.subplots(1, 2, figsize=(24, 8))
+fig1.suptitle('2022 - Distribution of Companies with at least one "1" (3 Fields)', fontsize=16, fontweight='bold')
 
 # Prepare 2022 data
 year_2022_data = detailed_breakdown[detailed_breakdown['year'] == '2022'].set_index('ateco_letter')
@@ -239,7 +231,7 @@ year_2022_data = year_2022_data.reindex(sector_order)
 
 # PERCENTAGE PLOT
 bottom_pct = np.zeros(len(sector_order))
-for count, color in zip([1, 2, 3, 4, 5], bar_colors):
+for count, color in zip(range(1, 4), bar_colors):  # 1 to 3
     pct_col = f'pct_{count}'
     if pct_col in year_2022_data.columns:
         values = year_2022_data[pct_col].values
@@ -264,11 +256,11 @@ ax1_pct.set_ylabel('Percentage of Companies (%)')
 ax1_pct.set_ylim(0, 110)
 ax1_pct.tick_params(axis='x', rotation=45)
 ax1_pct.grid(axis='y', alpha=0.3)
-ax1_pct.legend(title='Number of 1s', loc='upper right')
+ax1_pct.legend(title='Number of 1s', loc='upper right', fontsize='small')
 
 # ABSOLUTE PLOT
 bottom_abs = np.zeros(len(sector_order))
-for count, color in zip([1, 2, 3, 4, 5], bar_colors):
+for count, color in zip(range(1, 4), bar_colors):  # 1 to 3
     if count in year_2022_data.columns:
         values = year_2022_data[count].values
         bars = ax1_abs.bar(year_2022_data.index, values, bottom=bottom_abs,
@@ -291,19 +283,19 @@ ax1_abs.set_title('Absolute Counts', fontweight='bold', fontsize=14)
 ax1_abs.set_ylabel('Number of Companies')
 ax1_abs.tick_params(axis='x', rotation=45)
 ax1_abs.grid(axis='y', alpha=0.3)
-ax1_abs.legend(title='Number of 1s', loc='upper right')
+ax1_abs.legend(title='Number of 1s', loc='upper right', fontsize='small')
 
 plt.tight_layout()
 plt.subplots_adjust(top=0.90)
-image1_path = 'Image1_2022_5fields.png'
+image1_path = 'Image1_2022_3fields.png'
 plt.savefig(image1_path, dpi=300, bbox_inches='tight')
 plt.close()
 
 # =============================================================================
 # IMAGE 2: 2023 - PERCENTAGE AND ABSOLUTE VALUES
 # =============================================================================
-fig2, (ax2_pct, ax2_abs) = plt.subplots(1, 2, figsize=(22, 8))
-fig2.suptitle('2023 - Distribution of Companies with at least one "1"', fontsize=16, fontweight='bold')
+fig2, (ax2_pct, ax2_abs) = plt.subplots(1, 2, figsize=(24, 8))
+fig2.suptitle('2023 - Distribution of Companies with at least one "1" (3 Fields)', fontsize=16, fontweight='bold')
 
 # Prepare 2023 data
 year_2023_data = detailed_breakdown[detailed_breakdown['year'] == '2023'].set_index('ateco_letter')
@@ -311,7 +303,7 @@ year_2023_data = year_2023_data.reindex(sector_order)
 
 # PERCENTAGE PLOT
 bottom_pct = np.zeros(len(sector_order))
-for count, color in zip([1, 2, 3, 4, 5], bar_colors):
+for count, color in zip(range(1, 4), bar_colors):  # 1 to 3
     pct_col = f'pct_{count}'
     if pct_col in year_2023_data.columns:
         values = year_2023_data[pct_col].values
@@ -336,11 +328,11 @@ ax2_pct.set_ylabel('Percentage of Companies (%)')
 ax2_pct.set_ylim(0, 110)
 ax2_pct.tick_params(axis='x', rotation=45)
 ax2_pct.grid(axis='y', alpha=0.3)
-ax2_pct.legend(title='Number of 1s', loc='upper right')
+ax2_pct.legend(title='Number of 1s', loc='upper right', fontsize='small')
 
 # ABSOLUTE PLOT
 bottom_abs = np.zeros(len(sector_order))
-for count, color in zip([1, 2, 3, 4, 5], bar_colors):
+for count, color in zip(range(1, 4), bar_colors):  # 1 to 3
     if count in year_2023_data.columns:
         values = year_2023_data[count].values
         bars = ax2_abs.bar(year_2023_data.index, values, bottom=bottom_abs,
@@ -363,19 +355,19 @@ ax2_abs.set_title('Absolute Counts', fontweight='bold', fontsize=14)
 ax2_abs.set_ylabel('Number of Companies')
 ax2_abs.tick_params(axis='x', rotation=45)
 ax2_abs.grid(axis='y', alpha=0.3)
-ax2_abs.legend(title='Number of 1s', loc='upper right')
+ax2_abs.legend(title='Number of 1s', loc='upper right', fontsize='small')
 
 plt.tight_layout()
 plt.subplots_adjust(top=0.90)
-image2_path = 'Image2_2023_5fields.png'
+image2_path = 'Image2_2023_3fields.png'
 plt.savefig(image2_path, dpi=300, bbox_inches='tight')
 plt.close()
 
 # =============================================================================
 # IMAGE 3: 2024 - PERCENTAGE AND ABSOLUTE VALUES
 # =============================================================================
-fig3, (ax3_pct, ax3_abs) = plt.subplots(1, 2, figsize=(22, 8))
-fig3.suptitle('2024 - Distribution of Companies with at least one "1"', fontsize=16, fontweight='bold')
+fig3, (ax3_pct, ax3_abs) = plt.subplots(1, 2, figsize=(24, 8))
+fig3.suptitle('2024 - Distribution of Companies with at least one "1" (3 Fields)', fontsize=16, fontweight='bold')
 
 # Prepare 2024 data
 year_2024_data = detailed_breakdown[detailed_breakdown['year'] == '2024'].set_index('ateco_letter')
@@ -383,7 +375,7 @@ year_2024_data = year_2024_data.reindex(sector_order)
 
 # PERCENTAGE PLOT
 bottom_pct = np.zeros(len(sector_order))
-for count, color in zip([1, 2, 3, 4, 5], bar_colors):
+for count, color in zip(range(1, 4), bar_colors):  # 1 to 3
     pct_col = f'pct_{count}'
     if pct_col in year_2024_data.columns:
         values = year_2024_data[pct_col].values
@@ -408,11 +400,11 @@ ax3_pct.set_ylabel('Percentage of Companies (%)')
 ax3_pct.set_ylim(0, 110)
 ax3_pct.tick_params(axis='x', rotation=45)
 ax3_pct.grid(axis='y', alpha=0.3)
-ax3_pct.legend(title='Number of 1s', loc='upper right')
+ax3_pct.legend(title='Number of 1s', loc='upper right', fontsize='small')
 
 # ABSOLUTE PLOT
 bottom_abs = np.zeros(len(sector_order))
-for count, color in zip([1, 2, 3, 4, 5], bar_colors):
+for count, color in zip(range(1, 4), bar_colors):  # 1 to 3
     if count in year_2024_data.columns:
         values = year_2024_data[count].values
         bars = ax3_abs.bar(year_2024_data.index, values, bottom=bottom_abs,
@@ -435,11 +427,11 @@ ax3_abs.set_title('Absolute Counts', fontweight='bold', fontsize=14)
 ax3_abs.set_ylabel('Number of Companies')
 ax3_abs.tick_params(axis='x', rotation=45)
 ax3_abs.grid(axis='y', alpha=0.3)
-ax3_abs.legend(title='Number of 1s', loc='upper right')
+ax3_abs.legend(title='Number of 1s', loc='upper right', fontsize='small')
 
 plt.tight_layout()
 plt.subplots_adjust(top=0.90)
-image3_path = 'Image3_2024_5fields.png'
+image3_path = 'Image3_2024_3fields.png'
 plt.savefig(image3_path, dpi=300, bbox_inches='tight')
 plt.close()
 
@@ -461,31 +453,28 @@ for sector in sector_order:
             row = year_data.iloc[0]
             # Use .loc to avoid integer indexing issues
             pct_0 = row.loc['pct_0'] if 'pct_0' in row.index else 0
-            pct_5 = row.loc['pct_5'] if 'pct_5' in row.index else 0
+            pct_3 = row.loc['pct_3'] if 'pct_3' in row.index else 0  # Changed from pct_5 to pct_3
 
             # Calculate sum of companies with at least one 1
             total_with_ones = 0
-            for count in [1, 2, 3, 4, 5]:
+            for count in range(1, 4):  # 1 to 3
                 if count in row.index:
                     total_with_ones += row.loc[count]
 
-            # Calculate sum of companies with 5 ones (excellence)
-            excellence_count = row.loc[5] if 5 in row.index else 0
+            # Calculate sum of companies with 3 ones (excellence - all fields)
+            excellence_count = row.loc[3] if 3 in row.index else 0
 
             sector_data[f'Pct_1plus_{year}'] = 100 - pct_0  # Percentage with at least one 1
             sector_data[f'Abs_1plus_{year}'] = total_with_ones  # Absolute with at least one 1
-            sector_data[f'Pct_5ones_{year}'] = pct_5  # Percentage with 5 ones (full excellence)
-            sector_data[f'Abs_5ones_{year}'] = excellence_count  # Absolute with 5 ones
+            sector_data[f'Pct_3ones_{year}'] = pct_3  # Percentage with 3 ones (full excellence)
+            sector_data[f'Abs_3ones_{year}'] = excellence_count  # Absolute with 3 ones
 
     performance_analysis = pd.concat([performance_analysis, pd.DataFrame([sector_data])], ignore_index=True)
 
 # Calculate trends
-performance_analysis['Trend_1plus_Pct'] = performance_analysis['Pct_1plus_2024'] - performance_analysis[
-    'Pct_1plus_2022']
-performance_analysis['Trend_5ones_Pct'] = performance_analysis['Pct_5ones_2024'] - performance_analysis[
-    'Pct_5ones_2022']
-performance_analysis['Avg_Pct_1plus'] = performance_analysis[
-    ['Pct_1plus_2022', 'Pct_1plus_2023', 'Pct_1plus_2024']].mean(axis=1)
+performance_analysis['Trend_1plus_Pct'] = performance_analysis['Pct_1plus_2024'] - performance_analysis['Pct_1plus_2022']
+performance_analysis['Trend_3ones_Pct'] = performance_analysis['Pct_3ones_2024'] - performance_analysis['Pct_3ones_2022']
+performance_analysis['Avg_Pct_1plus'] = performance_analysis[['Pct_1plus_2022', 'Pct_1plus_2023', 'Pct_1plus_2024']].mean(axis=1)
 
 # Classify sectors by performance
 high_performers = performance_analysis[performance_analysis['Avg_Pct_1plus'] > 60]
@@ -497,27 +486,27 @@ low_performers = performance_analysis[performance_analysis['Avg_Pct_1plus'] < 30
 biggest_improvers = performance_analysis.nlargest(5, 'Trend_1plus_Pct')
 biggest_decliners = performance_analysis.nsmallest(5, 'Trend_1plus_Pct')
 
-# Excellence leaders
-excellence_leaders = performance_analysis.nlargest(5, 'Pct_5ones_2024')
+# Excellence leaders (3 ones = all fields completed)
+excellence_leaders = performance_analysis.nlargest(5, 'Pct_3ones_2024')
 
 # Large sectors with good performance
 large_engaged = performance_analysis[
     (performance_analysis['Total_Companies'] > 20) &
     (performance_analysis['Avg_Pct_1plus'] > 40)
-    ].sort_values('Total_Companies', ascending=False)
+].sort_values('Total_Companies', ascending=False)
 
 # Small sectors with exceptional performance
 small_excellent = performance_analysis[
     (performance_analysis['Total_Companies'] <= 5) &
     (performance_analysis['Avg_Pct_1plus'] > 70)
-    ].sort_values('Avg_Pct_1plus', ascending=False)
+].sort_values('Avg_Pct_1plus', ascending=False)
 
 # Distribution analysis for 2024
 total_companies_2024 = len(df)
 year_2024_summary = detailed_breakdown[detailed_breakdown['year'] == '2024'].groupby('year').sum()
 distribution_data = []
 if not year_2024_summary.empty:
-    for count in [0, 1, 2, 3, 4, 5]:
+    for count in range(0, 4):  # 0 to 3
         if count in year_2024_summary.columns:
             num_companies = year_2024_summary.loc['2024', count]
             percentage = (num_companies / total_companies_2024 * 100)
@@ -538,24 +527,22 @@ for year in ['2022', '2023', '2024']:
         avg_ones_data[year] = avg_ones
 
 # Prepare summary table
-summary_2024 = performance_analysis[
-    ['Sector', 'Total_Companies', 'Pct_1plus_2024', 'Pct_5ones_2024', 'Trend_1plus_Pct']].copy()
+summary_2024 = performance_analysis[['Sector', 'Total_Companies', 'Pct_1plus_2024', 'Pct_3ones_2024', 'Trend_1plus_Pct']].copy()
 summary_2024 = summary_2024.sort_values('Pct_1plus_2024', ascending=False)
-summary_2024.columns = ['Sector', 'Total Cos', '2024: % ≥1', '2024: % 5', 'Trend 22-24']
+summary_2024.columns = ['Sector', 'Total Cos', '2024: % ≥1', '2024: % 3', 'Trend 22-24']
 summary_table_data = summary_2024.round(1).values.tolist()
-summary_table_headers = ['Sector', 'Total Cos', '2024: % ≥1', '2024: % 5', 'Trend 22-24']
-
+summary_table_headers = ['Sector', 'Total Cos', '2024: % ≥1', '2024: % 3', 'Trend 22-24']
 
 # =============================================================================
-# CREATE PDF REPORT FUNCTION
+# CREATE PDF REPORT FUNCTION - ADJUSTED FOR 3 FIELDS
 # =============================================================================
 
-def create_pdf_report():
+def create_pdf_report_3fields():
     # Import colors locally to avoid conflicts
     from reportlab.lib import colors
 
     # Create PDF document
-    pdf_filename = f"Analysis_Report_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    pdf_filename = f"Analysis_Report_3fields_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
     doc = SimpleDocTemplate(pdf_filename, pagesize=landscape(letter))
 
     # Get styles
@@ -610,16 +597,16 @@ def create_pdf_report():
     story = []
 
     # Title page
-    story.append(Paragraph("ATECO Sector Engagement Analysis Report", title_style))
+    story.append(Paragraph("ATECO Sector Engagement Analysis Report (3 Fields)", title_style))
     story.append(Spacer(1, 20))
     story.append(Paragraph(f"Analysis Date: {datetime.datetime.now().strftime('%B %d, %Y')}", styles['Normal']))
-    story.append(Paragraph("Dataset: Tidier_Dataset.csv (5 fields analysis)", styles['Normal']))
+    story.append(Paragraph("Dataset: Starting_Dataset.csv (3 fields analysis)", styles['Normal']))
     story.append(Spacer(1, 40))
 
     # Executive Summary
     story.append(Paragraph("Executive Summary", heading1_style))
     story.append(Paragraph(f"This report analyzes engagement patterns across ATECO sectors from 2022 to 2024, "
-                           f"tracking binary field completion across 5 fields per company. "
+                           f"tracking binary field completion across 3 fields per company. "
                            f"The analysis covers {len(df)} companies across {len(sector_order)} ATECO sectors.",
                            normal_style))
     story.append(Spacer(1, 10))
@@ -629,6 +616,7 @@ def create_pdf_report():
         ['Metric', 'Value'],
         ['Total Companies Analyzed', f"{len(df):,}"],
         ['Total ATECO Sectors', f"{len(sector_order)}"],
+        ['Total Fields per Company', '3'],
         ['Overall Engagement (2024)', f"{overall_engagement_2024:.1f}%"],
         ['Overall Engagement Trend (2022-2024)', f"{overall_trend:+.1f}%"],
         ['High Performing Sectors', f"{len(high_performers)}"],
@@ -654,7 +642,7 @@ def create_pdf_report():
     story.append(PageBreak())
 
     # Section 1: Visualizations
-    story.append(Paragraph("1. Visual Analysis of Engagement Patterns", heading1_style))
+    story.append(Paragraph("1. Visual Analysis of Engagement Patterns (3 Fields)", heading1_style))
 
     # 2022 Image
     story.append(Paragraph("2022 - Distribution of Companies with at least one '1'", heading2_style))
@@ -682,16 +670,14 @@ def create_pdf_report():
 
     # Section 2: Sector Performance Classification
     story.append(Paragraph("2. Sector Performance Classification", heading1_style))
-    story.append(
-        Paragraph(f"High Performers (>60% average engagement): {len(high_performers)} sectors", heading2_style))
+    story.append(Paragraph(f"High Performers (>60% average engagement): {len(high_performers)} sectors", heading2_style))
 
     for _, row in high_performers.sort_values('Avg_Pct_1plus', ascending=False).iterrows():
         story.append(Paragraph(
             f"• {row['Sector']}: {row['Avg_Pct_1plus']:.1f}% avg engagement, {row['Total_Companies']} companies",
             bullet_style))
 
-    story.append(
-        Paragraph(f"Medium Performers (30-60% average engagement): {len(medium_performers)} sectors", heading2_style))
+    story.append(Paragraph(f"Medium Performers (30-60% average engagement): {len(medium_performers)} sectors", heading2_style))
 
     for _, row in medium_performers.sort_values('Avg_Pct_1plus', ascending=False).iterrows():
         story.append(Paragraph(
@@ -723,13 +709,13 @@ def create_pdf_report():
                                    f"({row['Pct_1plus_2022']:.1f}% → {row['Pct_1plus_2024']:.1f}%)", bullet_style))
 
     # Section 4: Excellence Analysis
-    story.append(Paragraph("4. Excellence Analysis (Companies with all 5 '1s')", heading1_style))
-    story.append(Paragraph("Sectors with Highest Excellence (5 '1s') in 2024:", heading2_style))
+    story.append(Paragraph("4. Excellence Analysis (Companies with all 3 '1s')", heading1_style))
+    story.append(Paragraph("Sectors with Highest Excellence (3 '1s') in 2024:", heading2_style))
 
     for _, row in excellence_leaders.iterrows():
-        if row['Pct_5ones_2024'] > 0:
+        if row['Pct_3ones_2024'] > 0:
             story.append(
-                Paragraph(f"• {row['Sector']}: {row['Pct_5ones_2024']:.1f}% ({row['Abs_5ones_2024']} companies)",
+                Paragraph(f"• {row['Sector']}: {row['Pct_3ones_2024']:.1f}% ({row['Abs_3ones_2024']} companies)",
                           bullet_style))
 
     story.append(PageBreak())
@@ -846,12 +832,13 @@ def create_pdf_report():
     story.append(Paragraph("Conclusions and Recommendations", heading1_style))
 
     conclusions = [
-        "1. Focus on low-performing sectors to improve overall engagement rates.",
-        "2. Investigate sectors showing declining trends to understand barriers to engagement.",
+        "1. Focus on low-performing sectors to improve overall engagement rates across all 3 fields.",
+        "2. Investigate sectors showing declining trends to understand barriers to complete engagement.",
         "3. Recognize and learn from high-performing sectors to replicate successful practices.",
         "4. Monitor small sectors with exceptional performance as potential benchmarks.",
-        "5. Use the detailed distribution analysis to target specific engagement levels.",
-        "6. Continue tracking trends to measure the impact of engagement initiatives."
+        "5. Use the detailed distribution analysis to target specific engagement levels (partial vs full completion).",
+        "6. Companies with 3 '1s' represent full compliance - track these for best practices.",
+        "7. Continue tracking trends to measure the impact of engagement initiatives across all 3 fields."
     ]
 
     for conclusion in conclusions:
@@ -868,7 +855,6 @@ def create_pdf_report():
 
     return pdf_filename
 
-
 # =============================================================================
 # MAIN EXECUTION
 # =============================================================================
@@ -878,14 +864,14 @@ if __name__ == "__main__":
         print(f"✓ Dataset loaded: {len(df)} companies across {len(sector_order)} ATECO sectors")
         print(f"✓ ATECO sectors found: {', '.join(sorted(sector_order))}")
         print(f"✓ Years analyzed: 2022, 2023, 2024")
-        print(f"✓ Fields analyzed: Field1, Field2, Field3, Field4, Field5")
+        print(f"✓ Fields analyzed: Field1 to Field3 (3 fields total)")
 
         # Create and save visualizations
         print(f"✓ Creating visualizations...")
 
         # Generate PDF report
         print(f"✓ Generating PDF report...")
-        pdf_file = create_pdf_report()
+        pdf_file = create_pdf_report_3fields()
 
         print(f"\n✓ Analysis complete!")
         print(f"✓ PDF report successfully created: {pdf_file}")
@@ -895,10 +881,10 @@ if __name__ == "__main__":
         print(f"  - High performing sectors: {len(high_performers)}")
         print(f"  - Medium performing sectors: {len(medium_performers)}")
         print(f"  - Low performing sectors: {len(low_performers)}")
+        print(f"  - Maximum possible '1s' per company: 3")
 
     except Exception as e:
         print(f"✗ Error during analysis: {e}")
         print(f"Error type: {type(e).__name__}")
         import traceback
-
         print(f"Error details: {traceback.format_exc()}")
