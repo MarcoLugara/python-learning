@@ -15,135 +15,75 @@ import colorsys
 from scipy import stats
 
 
-def reshaping_database(input_file, output_file1, output_file2):
+def process_dataset(file_path='Starting_Dataset.csv'):
     """
-    Remove all 2022 columns from the dataset file.
-
-    Parameters:
-    -----------
-    input_file : str
-        Path to the input CSV file
-    output_file : str, optional
-        Path to save the output CSV file. If None, returns the DataFrame
+    Process the dataset by:
+    1. Removing year 2022 columns
+    2. Renaming fields according to specified mappings
+    3. Saving results to CSV and Excel files
 
     Returns:
-    --------
-    pd.DataFrame or None
-        Returns the DataFrame if output_file is None, otherwise saves to file
+    df (pandas.DataFrame): The processed dataframe
     """
-    # Read the CSV file
-    df = pd.read_csv(input_file)
 
-    # Identify columns that end with '_2022'
-    columns_to_keep = [col for col in df.columns if not col.endswith('_2022')]
+    # Load the dataset
+    df = pd.read_csv(file_path)
 
-    # Keep only non-2022 columns
-    df = df[columns_to_keep]
-
-    df.to_csv(output_file1, index=False)
-    df.to_excel(output_file2, index=False)
-
-    return df
-
-
-def reshaping_database_part2(input_file, output_file1, output_file2):
-    """
-    Remove all 2022 columns from the dataset and rename fields with descriptive names.
-
-    Parameters:
-    -----------
-    input_file : str
-        The CSV content as a string
-
-    Returns:
-    --------
-    str
-        The reshaped CSV content without 2022 columns and with renamed field columns
-    """
-    # Read the CSV content
-    df = pd.read_csv(input_file)
-
-    # Define field name mapping
-    field_mapping = {
-        'Field1': 'Interviste',
-        'Field2': 'Survey_Online',
-        'Field3': 'Conference_Call',
-        'Field4': 'Visite_In_Loco',
-        'Field5': 'Seminari',
-        'Field6': 'Conferenze',
-        'Field7': 'Rapporti_Con_Agricoltori',
-        'Field8': 'Roadshow'
-    }
-
-    # Create a dictionary to map old column names to new column names
-    rename_dict = {}
-
-    # For each column in the dataframe
+    # 1. Remove year 2022 columns
+    columns_to_remove = []
     for col in df.columns:
-        # Check if it's a field column (starts with 'Field' followed by a number)
-        if col.startswith('Field') and '_' in col:
-            # Extract field number and year
-            field_part = col.split('_')[0]  # e.g., 'Field1'
-            year = col.split('_')[1]  # e.g., '2022', '2023', '2024'
+        if '_2022' in col:
+            columns_to_remove.append(col)
 
-            # Skip 2022 columns
-            if year == '2022':
-                continue
+    df = df.drop(columns=columns_to_remove)
 
-            # If it's a field we have in our mapping, rename it
-            if field_part in field_mapping:
-                new_name = f"{field_mapping[field_part]}_{year}"
-                rename_dict[col] = new_name
-            else:
-                # Keep as is if not in mapping (shouldn't happen with our data)
-                rename_dict[col] = col
-        else:
-            # Keep non-field columns as they are
-            rename_dict[col] = col
+    # 2. Rename the fields according to the specified mappings
+    rename_mapping = {}
 
-    # First, remove 2022 columns
-    columns_to_keep = [col for col in df.columns if not col.endswith('_2022')]
-    df = df[columns_to_keep]
+    # For each field and each remaining year (2023, 2024)
+    for year in ['2023', '2024']:
+        rename_mapping[f'Field1_{year}'] = f'Questionari_{year}'
+        rename_mapping[f'Field2_{year}'] = f'Focus_Group_{year}'
+        rename_mapping[f'Field3_{year}'] = f'Workshop_{year}'
+        rename_mapping[f'Field4_{year}'] = f'Group_Meeting_{year}'
+        rename_mapping[f'Field5_{year}'] = f'Incontri_Periodici_{year}'
 
-    # Then rename the columns
-    df = df.rename(columns=rename_dict)
+    # Apply the renaming
+    df = df.rename(columns=rename_mapping)
 
-    df.to_csv(output_file1, index=False)
-    df.to_excel(output_file2, index=False)
+    # Save to csv and xlsx
+    df.to_csv('Tidier_Dataset.csv', index=False)
+    df.to_excel('Tidier_Dataset.xlsx', index=False)
 
     return df
 
 """
 #OLD CODE
-df = reshaping_database('Starting_Dataset.csv', 'Tidier_Dataset.csv', 'Tidier_Dataset.xlsx')
-df = reshaping_database_part2('Tidier_Dataset.csv', 'Tidier_Dataset.csv', 'Tidier_Dataset.xlsx')
+df = process_dataset(file_path='Starting_Dataset.csv')
 """
 
 
 # =============================================================================
-# LOAD AND PREPARE DATA (MODIFIED FOR NEW DATASET)
+# LOAD AND PREPARE DATA (CUSTOMIZED FOR YOUR 5-FIELD DATASET)
 # =============================================================================
 
-# Load the data from the new CSV
+# Load the data from your CSV
 df = pd.read_csv('Tidier_Dataset.csv')
 
-# Extract ATECO letter from the 'ateco' column (it's already just a letter in this dataset)
+# Extract ATECO letter from the 'ateco' column
 df['ateco_letter'] = df['ateco']
 
-# Define field groups - NEW: Only one group with 8 fields
-# Based on the column names: Interviste, Survey_Online, Conference_Call, Visite_In_Loco,
-# Seminari, Conferenze, Rapporti_Con_Agricoltori, Roadshow
+# Define field groups - YOUR 5 FIELDS
 field_groups = {
-    'Single_Group': {
-        'fields': ['Interviste', 'Survey_Online', 'Conference_Call', 'Visite_In_Loco',
-                   'Seminari', 'Conferenze', 'Rapporti_Con_Agricoltori', 'Roadshow'],
+    'All_Fields': {
+        'fields': ['Questionari', 'Focus_Group', 'Workshop', 'Group_Meeting', 'Incontri_Periodici'],
         'color_base': '#4a90e2',  # Blue base color
-        'name': 'All 8 Fields',
-        'max_fields': 8
+        'name': 'All 5 Fields',
+        'max_fields': 5  # Changed from 8 to 5
     }
 }
 
-# Calculate sum of ones for each group and year (only 2023 and 2024 in this dataset)
+# Calculate sum of ones for each group and year (2023 and 2024)
 for group_name, group_info in field_groups.items():
     for year in ['2023', '2024']:
         field_columns = [f'{field}_{year}' for field in group_info['fields']]
@@ -152,50 +92,44 @@ for group_name, group_info in field_groups.items():
 # Calculate overall sum for each year
 for year in ['2023', '2024']:
     all_field_columns = []
-    for field in field_groups['Single_Group']['fields']:
+    for field in field_groups['All_Fields']['fields']:
         all_field_columns.append(f'{field}_{year}')
     df[f'total_sum_{year}'] = df[all_field_columns].sum(axis=1)
 
 # =============================================================================
-# COLOR FUNCTIONS
+# COLOR FUNCTIONS (ADJUSTED FOR 5 FIELDS)
 # =============================================================================
 
-def get_extreme_gradient(num_shades, reverse=False):
-    """Generate a very distinct gradient from light yellow to dark red."""
-    # Distinct color steps for better differentiation
+def get_color_gradient(base_color, num_shades, reverse=False):
+    """Generate a color gradient from light to dark or vice versa."""
+    # Convert hex to RGB
+    base_color = base_color.lstrip('#')
+    rgb = tuple(int(base_color[i:i + 2], 16) for i in (0, 2, 4))
 
-    if num_shades == 8:
-        # Pre-defined distinct colors for 8 shades
-        colors = [
-            '#ffffcc',  # Very light yellow (1 field)
-            '#ffeda0',  # Light yellow (2 fields)
-            '#fed976',  # Yellow-orange (3 fields)
-            '#feb24c',  # Orange (4 fields)
-            '#fd8d3c',  # Dark orange (5 fields)
-            '#fc4e2a',  # Orange-red (6 fields)
-            '#e31a1c',  # Red (7 fields)
-            '#bd0026'  # Dark red (8 fields)
-        ]
-    else:
-        # Fallback for other numbers of shades
-        colors = []
-        for i in range(num_shades):
-            # Create a gradient from yellow to red
-            hue = 0.1 - (i / (num_shades - 1)) * 0.1  # 0.1 (yellow) to 0.0 (red)
-            saturation = 0.5 + (i / (num_shades - 1)) * 0.5  # 0.5 to 1.0
-            lightness = 0.9 - (i / (num_shades - 1)) * 0.5  # 0.9 to 0.4
-            r, g, b = colorsys.hls_to_rgb(hue, lightness, saturation)
-            colors.append(f'#{int(r * 255):02x}{int(g * 255):02x}{int(b * 255):02x}')
+    # Convert RGB to HSL
+    r, g, b = [x / 255.0 for x in rgb]
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
 
+    # Generate shades
+    shades = []
     if reverse:
-        return colors[::-1]  # Reverse if needed
-    return colors
+        light_values = np.linspace(0.85, 0.25, num_shades)
+    else:
+        light_values = np.linspace(0.25, 0.85, num_shades)
 
-# Generate color gradients for each group (excluding 0)
+    for lightness in light_values:
+        r, g, b = colorsys.hls_to_rgb(h, lightness, s)
+        hex_color = f'#{int(r * 255):02x}{int(g * 255):02x}{int(b * 255):02x}'
+        shades.append(hex_color)
+
+    return shades
+
+# Generate color gradients for the group (for values 0-3)
 group_colors = {}
 for group_name, group_info in field_groups.items():
-    num_shades = group_info['max_fields']
-    group_colors[group_name] = get_extreme_gradient(num_shades, reverse=True)
+    # Generate 4 colors for values 0, 1, 2, 3
+    num_shades = group_info['max_fields'] + 1  # Including 0
+    group_colors[group_name] = get_color_gradient(group_info['color_base'], num_shades, reverse=True)
 
 # =============================================================================
 # PREPARE DATA FOR VISUALIZATION
@@ -204,7 +138,7 @@ for group_name, group_info in field_groups.items():
 # Create detailed breakdown by ATECO letter and sum values for each group
 detailed_breakdown = pd.DataFrame()
 
-for year in ['2023', '2024']:  # MODIFIED: Only 2023 and 2024
+for year in ['2023', '2024']:
     year_data_list = []
 
     for sector in df['ateco_letter'].unique():
@@ -234,7 +168,7 @@ detailed_breakdown = detailed_breakdown.fillna(0)
 sector_order = df['ateco_letter'].value_counts().index
 
 # =============================================================================
-# ENHANCED STATISTICAL ANALYSIS (MODIFIED FOR 2 YEARS)
+# ENHANCED STATISTICAL ANALYSIS (ADJUSTED FOR 5 FIELDS)
 # =============================================================================
 
 def calculate_comprehensive_metrics():
@@ -251,11 +185,11 @@ def calculate_comprehensive_metrics():
             'Total_Companies': total_companies
         }
 
-        # Year-wise metrics (only 2023 and 2024)
+        # Year-wise metrics
         for year in ['2023', '2024']:
             # Overall completion metrics
             total_fields_completed = sector_data[f'total_sum_{year}'].sum()
-            max_possible = 8 * total_companies  # MODIFIED: 8 fields instead of 16
+            max_possible = 5 * total_companies  # CHANGED: 5 fields instead of 8
             overall_completion = (total_fields_completed / max_possible * 100) if max_possible > 0 else 0
 
             sector_metrics[f'overall_completion_{year}'] = overall_completion
@@ -266,12 +200,12 @@ def calculate_comprehensive_metrics():
             sector_metrics[f'pct_with_any_{year}'] = (
                     companies_with_any / total_companies * 100) if total_companies > 0 else 0
 
-            # Percentage with full completion (8 fields) - MODIFIED
-            companies_with_full = len(sector_data[sector_data[f'total_sum_{year}'] == 8])
+            # Percentage with full completion (5 fields) - CHANGED
+            companies_with_full = len(sector_data[sector_data[f'total_sum_{year}'] == 5])
             sector_metrics[f'pct_with_full_{year}'] = (
                     companies_with_full / total_companies * 100) if total_companies > 0 else 0
 
-            # Group-specific metrics (only one group in this dataset)
+            # Group-specific metrics
             for group_name, group_info in field_groups.items():
                 sum_col = f'{group_name}_sum_{year}'
                 max_fields = group_info['max_fields']
@@ -293,7 +227,7 @@ def calculate_comprehensive_metrics():
                 sector_metrics[f'{group_name}_pct_any_{year}'] = pct_any_group
                 sector_metrics[f'{group_name}_pct_full_{year}'] = pct_full_group
 
-        # Calculate trends (2023 to 2024 instead of 2022 to 2024)
+        # Calculate trends (2023 to 2024)
         sector_metrics['trend_overall_23_24'] = sector_metrics.get('overall_completion_2024', 0) - sector_metrics.get(
             'overall_completion_2023', 0)
         sector_metrics['trend_any_23_24'] = sector_metrics.get('pct_with_any_2024', 0) - sector_metrics.get(
@@ -323,7 +257,7 @@ def calculate_comprehensive_metrics():
     return pd.DataFrame(metrics_list)
 
 # =============================================================================
-# ADVANCED STATISTICAL ANALYSIS (MODIFIED FOR 2 YEARS)
+# ADVANCED STATISTICAL ANALYSIS (ADJUSTED FOR 5 FIELDS)
 # =============================================================================
 
 def calculate_advanced_statistics():
@@ -336,9 +270,9 @@ def calculate_advanced_statistics():
         year_stats = {
             'total_companies': len(df),
             'companies_with_any': len(df[df[f'total_sum_{year}'] > 0]),
-            'companies_with_full': len(df[df[f'total_sum_{year}'] == 8]),  # MODIFIED: 8 fields
+            'companies_with_full': len(df[df[f'total_sum_{year}'] == 5]),  # CHANGED: 5 fields
             'total_fields_completed': df[f'total_sum_{year}'].sum(),
-            'max_possible_fields': len(df) * 8  # MODIFIED: 8 fields
+            'max_possible_fields': len(df) * 5  # CHANGED: 5 fields
         }
 
         year_stats['pct_with_any'] = (year_stats['companies_with_any'] / year_stats['total_companies'] * 100) if \
@@ -363,7 +297,7 @@ def calculate_advanced_statistics():
     for year in ['2023', '2024']:
         distribution = []
         total_companies = len(df)
-        for count in range(0, 9):  # MODIFIED: 0 to 8 fields
+        for count in range(0, 6):  # CHANGED: 0 to 5 fields
             companies = len(df[df[f'total_sum_{year}'] == count])
             percentage = (companies / total_companies * 100) if total_companies > 0 else 0
             distribution.append({
@@ -418,7 +352,7 @@ def calculate_advanced_statistics():
     }
 
 # =============================================================================
-# PERFORMANCE CLASSIFICATION
+# PERFORMANCE CLASSIFICATION (ADJUSTED THRESHOLDS FOR 5 FIELDS)
 # =============================================================================
 
 def classify_sectors(performance_df):
@@ -426,24 +360,24 @@ def classify_sectors(performance_df):
 
     classifications = {}
 
-    # Overall performance classification (adjusted thresholds for 8 fields)
+    # Overall performance classification (adjusted thresholds for 5 fields)
     if 'avg_overall_completion' in performance_df.columns:
         overall_avg = performance_df['avg_overall_completion']
-        classifications['high_performers'] = performance_df[overall_avg > 50] if len(
+        classifications['high_performers'] = performance_df[overall_avg > 60] if len(
             performance_df) > 0 else pd.DataFrame()  # Adjusted threshold
-        classifications['medium_performers'] = performance_df[(overall_avg >= 25) & (overall_avg <= 50)] if len(
+        classifications['medium_performers'] = performance_df[(overall_avg >= 30) & (overall_avg <= 60)] if len(
             performance_df) > 0 else pd.DataFrame()  # Adjusted threshold
-        classifications['low_performers'] = performance_df[overall_avg < 25] if len(
+        classifications['low_performers'] = performance_df[overall_avg < 30] if len(
             performance_df) > 0 else pd.DataFrame()  # Adjusted threshold
 
     # Engagement level classification
     if 'avg_pct_with_any' in performance_df.columns:
         engagement_avg = performance_df['avg_pct_with_any']
-        classifications['highly_engaged'] = performance_df[engagement_avg > 60] if len(
+        classifications['highly_engaged'] = performance_df[engagement_avg > 70] if len(
             performance_df) > 0 else pd.DataFrame()
-        classifications['moderately_engaged'] = performance_df[(engagement_avg >= 30) & (engagement_avg <= 60)] if len(
+        classifications['moderately_engaged'] = performance_df[(engagement_avg >= 40) & (engagement_avg <= 70)] if len(
             performance_df) > 0 else pd.DataFrame()
-        classifications['low_engaged'] = performance_df[engagement_avg < 30] if len(
+        classifications['low_engaged'] = performance_df[engagement_avg < 40] if len(
             performance_df) > 0 else pd.DataFrame()
 
     # Trend classification (2023 to 2024)
@@ -458,7 +392,7 @@ def classify_sectors(performance_df):
         classifications['consistent_performers'] = performance_df[abs(trend) < 5] if len(
             performance_df) > 0 else pd.DataFrame()
 
-    # Group leaders (only one group in this dataset)
+    # Group leaders
     for group_name in field_groups.keys():
         avg_col = f'avg_{group_name}_completion'
         if avg_col in performance_df.columns:
@@ -473,18 +407,18 @@ def classify_sectors(performance_df):
     if 'Total_Companies' in performance_df.columns and 'avg_overall_completion' in performance_df.columns:
         classifications['large_high_performers'] = performance_df[
             (performance_df['Total_Companies'] > performance_df['Total_Companies'].median()) &
-            (performance_df['avg_overall_completion'] > 30)
+            (performance_df['avg_overall_completion'] > 40)
             ] if len(performance_df) > 0 else pd.DataFrame()
 
         classifications['small_excellent'] = performance_df[
             (performance_df['Total_Companies'] <= 5) &
-            (performance_df['avg_overall_completion'] > 50)
+            (performance_df['avg_overall_completion'] > 60)
             ].sort_values('avg_overall_completion', ascending=False) if len(performance_df) > 0 else pd.DataFrame()
 
     return classifications
 
 # =============================================================================
-# CREATE VISUALIZATIONS - ABSOLUTE VALUES (ADAPTED FOR SINGLE GROUP)
+# CREATE VISUALIZATIONS - ABSOLUTE VALUES (ADAPTED FOR 5 FIELDS)
 # =============================================================================
 
 def create_absolute_bar_chart(year_data, year, sector_order):
@@ -515,8 +449,8 @@ def create_absolute_bar_chart(year_data, year, sector_order):
                 sector_dict[group_name] = group_dict
             sector_data[sector] = sector_dict
 
-    # Create the stacked bars (only one group in this dataset)
-    group_order = ['Single_Group']
+    # Create the stacked bars
+    group_order = ['All_Fields']
 
     # Initialize bottoms for each bar
     bottoms = np.zeros(len(sector_order))
@@ -616,23 +550,14 @@ def create_absolute_bar_chart(year_data, year, sector_order):
             ax.text(i, total + max_height * 0.01, f'{int(total)}',
                     ha='center', va='bottom', fontsize=10, fontweight='bold')
 
-    # NEW: Adjust y-axis to bring highest bar close to top
-    # Get current y-axis limits
+    # Adjust y-axis to bring highest bar close to top
     y_min, y_max_current = ax.get_ylim()
-
-    # Calculate what the new y_max should be
-    # We want the highest bar to be close to the top but not touching
-    # Let's set it so the highest bar reaches about 90% of the y-axis height
     if max_height > 0:
-        # Calculate padding: about 10% above the highest bar
         padding = max_height * 0.1
         new_y_max = max_height + padding
-
-        # Make sure we have at least some minimum range
         if new_y_max - y_min < max_height * 0.2:
             new_y_max = max_height * 1.2
     else:
-        # Fallback if all bars are 0
         new_y_max = 10
 
     # Set the new y-axis limits
@@ -685,7 +610,7 @@ def create_absolute_bar_chart(year_data, year, sector_order):
     return fig, sorted_sectors
 
 # =============================================================================
-# CREATE VISUALIZATIONS - PERCENTAGES (ADAPTED FOR SINGLE GROUP)
+# CREATE VISUALIZATIONS - PERCENTAGES (ADAPTED FOR 5 FIELDS)
 # =============================================================================
 
 def create_percentage_bar_chart(year_data, year, sector_order):
@@ -704,8 +629,8 @@ def create_percentage_bar_chart(year_data, year, sector_order):
             total_companies = sector_row.iloc[0]['total_companies']
             sector_totals[sector] = total_companies
 
-            # Calculate total possible fields (8 fields per company) - MODIFIED
-            total_possible_fields = 8 * total_companies if total_companies > 0 else 1
+            # Calculate total possible fields (5 fields per company)
+            total_possible_fields = 5 * total_companies if total_companies > 0 else 1
 
             # For each group and value (1 to max_fields), calculate contribution percentage
             stratified_dict = {}
@@ -732,7 +657,7 @@ def create_percentage_bar_chart(year_data, year, sector_order):
     sorted_sector_names = [sector for sector, _ in sorted_sectors]
 
     # Create the stacked bars
-    group_order = ['Single_Group']
+    group_order = ['All_Fields']
 
     # Initialize bottoms for each bar
     x_positions_sorted = np.arange(len(sorted_sector_names))
@@ -838,7 +763,7 @@ def create_percentage_bar_chart(year_data, year, sector_order):
     return fig, sorted_sector_names
 
 # =============================================================================
-# CREATE ALL VISUALIZATIONS (MODIFIED FOR 2 YEARS)
+# CREATE ALL VISUALIZATIONS
 # =============================================================================
 
 # Create visualizations for each year
@@ -847,7 +772,7 @@ image_paths_percentage = []
 all_sorted_sectors = {}
 
 print("  - Creating absolute value charts...")
-for year in ['2023', '2024']:  # MODIFIED: Only 2023 and 2024
+for year in ['2023', '2024']:
     try:
         year_data = detailed_breakdown[detailed_breakdown['year'] == year]
         fig_abs, sorted_sectors = create_absolute_bar_chart(year_data, year, sector_order)
@@ -862,7 +787,7 @@ for year in ['2023', '2024']:  # MODIFIED: Only 2023 and 2024
         image_paths_absolute.append(None)
 
 print("  - Creating percentage charts...")
-for year in ['2023', '2024']:  # MODIFIED: Only 2023 and 2024
+for year in ['2023', '2024']:
     try:
         year_data = detailed_breakdown[detailed_breakdown['year'] == year]
         fig_pct, sorted_sectors = create_percentage_bar_chart(year_data, year, sector_order)
@@ -901,14 +826,14 @@ summary_table_data = summary_data.round(1).values.tolist()
 summary_table_headers = ['Sector', 'Total Cos', '2024: Overall %', '2024: Avg Fields', '2024: % Any', 'Trend 23-24']
 
 # =============================================================================
-# ENHANCED PDF REPORT (ADAPTED FOR NEW DATASET)
+# ENHANCED PDF REPORT (CUSTOMIZED FOR YOUR 5 FIELDS)
 # =============================================================================
 
 def create_pdf_report():
     from reportlab.lib import colors
 
     # Create PDF document
-    pdf_filename = f"Analysis_Report_Enhanced_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    pdf_filename = f"Analysis_Report_5Fields_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
     doc = SimpleDocTemplate(pdf_filename, pagesize=landscape(letter))
 
     # Get styles
@@ -971,12 +896,11 @@ def create_pdf_report():
     story = []
 
     # Title page
-    story.append(Paragraph("ATECO Sector Analysis - Enhanced Statistical Report", title_style))
+    story.append(Paragraph("ATECO Sector Analysis - 5-Field Dataset Report", title_style))
     story.append(Spacer(1, 20))
     story.append(Paragraph(f"Analysis Date: {datetime.datetime.now().strftime('%B %d, %Y')}", styles['Normal']))
-    story.append(Paragraph("Dataset: 8 fields, 2 years (2023-2024)", styles['Normal']))
-    story.append(Paragraph("Field Group: Interviste, Survey_Online, Conference_Call, Visite_In_Loco, "
-                           "Seminari, Conferenze, Rapporti_Con_Agricoltori, Roadshow", styles['Normal']))
+    story.append(Paragraph("Dataset: 5 fields, 2 years (2023-2024)", styles['Normal']))
+    story.append(Paragraph("Field Names: Questionari, Focus_Group, Workshop, Group_Meeting, Incontri_Periodici", styles['Normal']))
     story.append(Spacer(1, 20))
 
     # Executive Summary with Statistical Insights
@@ -992,16 +916,16 @@ def create_pdf_report():
         ['Total ATECO Sectors', f"{len(sector_order)}"],
         ['Overall Completion Rate (2024)', f"{key_stats['overall_completion']:.1f}%"],
         ['Companies with Any Data (2024)', f"{key_stats['pct_with_any']:.1f}%"],
-        ['Companies with All 8 Fields (2024)', f"{key_stats['pct_with_full']:.1f}%"],
+        ['Companies with All 5 Fields (2024)', f"{key_stats['pct_with_full']:.1f}%"],
         ['Average Fields per Company (2024)', f"{key_stats['avg_fields_per_company']:.2f}"],
         ['Median Fields per Company (2024)', f"{key_stats['median_fields']:.1f}"],
         ['Standard Deviation (2024)', f"{key_stats['std_fields']:.2f}"],
         ['Overall Trend 2023-2024', f"{trend_stats['overall_completion_growth']:+.1f}%"],
         ['Engagement Growth 2023-2024', f"{trend_stats['pct_with_any_growth']:+.1f}%"],
-        ['High Performing Sectors (>50%)', f"{len(sector_classifications.get('high_performers', pd.DataFrame()))}"],
-        ['Medium Performing Sectors (25-50%)',
+        ['High Performing Sectors (>60%)', f"{len(sector_classifications.get('high_performers', pd.DataFrame()))}"],
+        ['Medium Performing Sectors (30-60%)',
          f"{len(sector_classifications.get('medium_performers', pd.DataFrame()))}"],
-        ['Low Performing Sectors (<25%)', f"{len(sector_classifications.get('low_performers', pd.DataFrame()))}"]
+        ['Low Performing Sectors (<30%)', f"{len(sector_classifications.get('low_performers', pd.DataFrame()))}"]
     ]
 
     key_table = Table(key_data, colWidths=[240, 160])
@@ -1030,19 +954,20 @@ def create_pdf_report():
     # Section 1: Distribution Analysis
     story.append(Paragraph("1. Statistical Distribution Analysis", heading1_style))
     story.append(
-        Paragraph("This section shows how many companies completed different numbers of fields (0-8).", normal_style))
+        Paragraph("This section shows how many companies completed different numbers of fields (0-5).", normal_style))
 
     # Distribution statistics table
     dist_headers = ['Fields', 'Companies (2023)', '%', 'Companies (2024)', '%']
     dist_data = [dist_headers]
 
-    # Show distributions for 0-8 fields
+    # Show distributions for 0-5 fields
     ranges = [
         (0, 0, "0"),
-        (1, 2, "1-2"),
-        (3, 4, "3-4"),
-        (5, 6, "5-6"),
-        (7, 8, "7-8")
+        (1, 1, "1"),
+        (2, 2, "2"),
+        (3, 3, "3"),
+        (4, 4, "4"),
+        (5, 5, "5")
     ]
 
     for start, end, label in ranges:
@@ -1069,7 +994,7 @@ def create_pdf_report():
                 row.append(f"{total_pct:.1f}%")
         dist_data.append(row)
 
-    dist_table = Table(dist_data, colWidths=[90, 90, 80, 90, 80])
+    dist_table = Table(dist_data, colWidths=[70, 90, 80, 90, 80])
     dist_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -1140,7 +1065,7 @@ def create_pdf_report():
         "Each bar shows what percentage of the total possible fields were completed in each sector. Sorted by percentage (descending).",
         normal_style))
     story.append(Paragraph("How to read: Taller bars = higher percentage of fields completed", bullet_style))
-    story.append(Paragraph("Note: 100% would mean ALL companies completed ALL 8 fields", bullet_style))
+    story.append(Paragraph("Note: 100% would mean ALL companies completed ALL 5 fields", bullet_style))
     story.append(Paragraph("Color meaning: Same as absolute charts (see legend)", bullet_style))
     story.append(Paragraph("n= shows total number of companies in that sector", bullet_style))
 
@@ -1167,7 +1092,7 @@ def create_pdf_report():
     high_performers = sector_classifications.get('high_performers', pd.DataFrame())
     if len(high_performers) > 0:
         story.append(
-            Paragraph(f"High Performers (>50% overall completion): {len(high_performers)} sectors", heading2_style))
+            Paragraph(f"High Performers (>60% overall completion): {len(high_performers)} sectors", heading2_style))
         story.append(Paragraph("These sectors consistently completed the highest percentage of fields:", normal_style))
         for _, row in high_performers.sort_values('avg_overall_completion', ascending=False).iterrows():
             story.append(Paragraph(
@@ -1183,7 +1108,7 @@ def create_pdf_report():
     # Medium Performers
     medium_performers = sector_classifications.get('medium_performers', pd.DataFrame())
     if len(medium_performers) > 0:
-        story.append(Paragraph(f"Medium Performers (25-50% overall completion): {len(medium_performers)} sectors",
+        story.append(Paragraph(f"Medium Performers (30-60% overall completion): {len(medium_performers)} sectors",
                                heading2_style))
         story.append(Paragraph("These sectors completed a moderate percentage of fields:", normal_style))
         for _, row in medium_performers.sort_values('avg_overall_completion', ascending=False).iterrows():
@@ -1201,7 +1126,7 @@ def create_pdf_report():
     low_performers = sector_classifications.get('low_performers', pd.DataFrame())
     if len(low_performers) > 0:
         story.append(
-            Paragraph(f"Low Performers (<25% overall completion): {len(low_performers)} sectors", heading2_style))
+            Paragraph(f"Low Performers (<30% overall completion): {len(low_performers)} sectors", heading2_style))
         story.append(Paragraph("These sectors completed the lowest percentage of fields:", normal_style))
         for _, row in low_performers.sort_values('avg_overall_completion', ascending=False).iterrows():
             story.append(Paragraph(
@@ -1331,12 +1256,12 @@ def create_pdf_report():
     insights = [
         f"1. Overall Performance: In 2024, companies completed {key_stats['overall_completion']:.1f}% of all possible fields.",
         f"2. Company Participation: {key_stats['pct_with_any']:.1f}% of companies completed at least 1 field in 2024.",
-        f"3. Full Compliance: Only {key_stats['pct_with_full']:.1f}% of companies completed all 8 fields in 2024.",
+        f"3. Full Compliance: Only {key_stats['pct_with_full']:.1f}% of companies completed all 5 fields in 2024.",
         f"4. Average Completion: Each company completed an average of {key_stats['avg_fields_per_company']:.1f} fields in 2024.",
         f"5. Most Common: The most common number of completed fields is {mode_str}.",
         f"6. Yearly Growth: From 2023 to 2024, completion increased by {trend_stats['overall_completion_growth']:+.1f}%.",
-        f"7. Best Performing Sectors: {len(sector_classifications.get('high_performers', pd.DataFrame()))} sectors consistently completed >50% of fields.",
-        f"8. Areas for Improvement: {len(sector_classifications.get('low_performers', pd.DataFrame()))} sectors completed <25% of fields."
+        f"7. Best Performing Sectors: {len(sector_classifications.get('high_performers', pd.DataFrame()))} sectors consistently completed >60% of fields.",
+        f"8. Areas for Improvement: {len(sector_classifications.get('low_performers', pd.DataFrame()))} sectors completed <30% of fields."
     ]
 
     for insight in insights:
@@ -1363,7 +1288,7 @@ def create_pdf_report():
 print(f"\n✓ Analysis complete!")
 
 # Generate PDF report
-print(f"✓ Generating enhanced PDF report...")
+print(f"✓ Generating enhanced PDF report for 5-field dataset...")
 pdf_file = create_pdf_report()
 
 if pdf_file:
@@ -1378,9 +1303,8 @@ print(f"  - Absolute charts: {len(valid_abs)} created")
 print(f"  - Percentage charts: {len(valid_pct)} created")
 
 print(f"\n✓ Dataset Specifications:")
-print(f"  - Number of fields: 8")
+print(f"  - Number of fields: 5")
+print(f"  - Field names: Questionari, Focus_Group, Workshop, Group_Meeting, Incontri_Periodici")
 print(f"  - Years analyzed: 2023, 2024")
 print(f"  - Number of companies: {len(df)}")
 print(f"  - Number of ATECO sectors: {len(sector_order)}")
-print(f"  - Field names: Interviste, Survey_Online, Conference_Call, Visite_In_Loco, Seminari, Conferenze, Rapporti_Con_Agricoltori, Roadshow")
-
