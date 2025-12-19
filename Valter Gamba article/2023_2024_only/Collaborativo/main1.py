@@ -162,35 +162,42 @@ for year in ['2023', '2024']:
 # COLOR FUNCTIONS
 # =============================================================================
 
-def get_color_gradient(base_color, num_shades, reverse=False):
-    """Generate a color gradient from light to dark or vice versa."""
-    # Convert hex to RGB
-    base_color = base_color.lstrip('#')
-    rgb = tuple(int(base_color[i:i + 2], 16) for i in (0, 2, 4))
+def get_extreme_gradient(num_shades, reverse=False):
+    """Generate a very distinct gradient from light yellow to dark red."""
+    # Distinct color steps for better differentiation
 
-    # Convert RGB to HSL
-    r, g, b = [x / 255.0 for x in rgb]
-    h, l, s = colorsys.rgb_to_hls(r, g, b)
-
-    # Generate shades - ADJUSTED FOR BETTER CONTRAST
-    shades = []
-    if reverse:
-        light_values = np.linspace(0.85, 0.25, num_shades)
+    if num_shades == 8:
+        # Pre-defined distinct colors for 8 shades
+        colors = [
+            '#ffffcc',  # Very light yellow (1 field)
+            '#ffeda0',  # Light yellow (2 fields)
+            '#fed976',  # Yellow-orange (3 fields)
+            '#feb24c',  # Orange (4 fields)
+            '#fd8d3c',  # Dark orange (5 fields)
+            '#fc4e2a',  # Orange-red (6 fields)
+            '#e31a1c',  # Red (7 fields)
+            '#bd0026'  # Dark red (8 fields)
+        ]
     else:
-        light_values = np.linspace(0.25, 0.85, num_shades)
+        # Fallback for other numbers of shades
+        colors = []
+        for i in range(num_shades):
+            # Create a gradient from yellow to red
+            hue = 0.1 - (i / (num_shades - 1)) * 0.1  # 0.1 (yellow) to 0.0 (red)
+            saturation = 0.5 + (i / (num_shades - 1)) * 0.5  # 0.5 to 1.0
+            lightness = 0.9 - (i / (num_shades - 1)) * 0.5  # 0.9 to 0.4
+            r, g, b = colorsys.hls_to_rgb(hue, lightness, saturation)
+            colors.append(f'#{int(r * 255):02x}{int(g * 255):02x}{int(b * 255):02x}')
 
-    for lightness in light_values:
-        r, g, b = colorsys.hls_to_rgb(h, lightness, s)
-        hex_color = f'#{int(r * 255):02x}{int(g * 255):02x}{int(b * 255):02x}'
-        shades.append(hex_color)
-
-    return shades
+    if reverse:
+        return colors[::-1]  # Reverse if needed
+    return colors
 
 # Generate color gradients for each group (excluding 0)
 group_colors = {}
 for group_name, group_info in field_groups.items():
     num_shades = group_info['max_fields']
-    group_colors[group_name] = get_color_gradient(group_info['color_base'], num_shades, reverse=True)
+    group_colors[group_name] = get_extreme_gradient(num_shades, reverse=True)
 
 # =============================================================================
 # PREPARE DATA FOR VISUALIZATION
