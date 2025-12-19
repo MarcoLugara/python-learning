@@ -12,7 +12,7 @@ import datetime
 import os
 
 
-def comprehensive_database_reshaping(original_csv_path, ateco_codes_csv_path, output_csv_path='Starting_Dataset.csv',
+def comprehensive_database_reshaping(original_csv_path, ateco_codes_csv_path, output_csv_path='Starting_Dataset.csv.csv',
                                      output_excel_path='Tidier_Dataset.xlsx'):
     """
     Comprehensive function to perform all database reshaping steps in a single function:
@@ -26,7 +26,7 @@ def comprehensive_database_reshaping(original_csv_path, ateco_codes_csv_path, ou
     Parameters:
     - original_csv_path: Path to 'Database Ufficiale.csv'
     - ateco_codes_csv_path: Path to 'ATECO_codes.csv'
-    - output_csv_path: Path to save the final CSV (default: 'Starting_Dataset.csv')
+    - output_csv_path: Path to save the final CSV (default: 'Starting_Dataset.csv.csv')
     - output_excel_path: Path to save the final Excel (default: 'Tidier_Dataset.xlsx')
 
     Returns:
@@ -173,7 +173,7 @@ def comprehensive_database_reshaping(original_csv_path, ateco_codes_csv_path, ou
              'Field5_2022', 'Field5_2023', 'Field5_2024'
              ]]
 
-    df.to_csv('Starting_Dataset.csv', index=False)
+    df.to_csv('Starting_Dataset.csv.csv', index=False)
     df.to_excel('Tidier_Dataset.xlsx', index=False)
     # Instead of saving, return the df
     return df
@@ -613,7 +613,7 @@ def create_pdf_report():
     story.append(Paragraph("ATECO Sector Engagement Analysis Report", title_style))
     story.append(Spacer(1, 20))
     story.append(Paragraph(f"Analysis Date: {datetime.datetime.now().strftime('%B %d, %Y')}", styles['Normal']))
-    story.append(Paragraph("Dataset: Starting_Dataset.csv (5 fields analysis)", styles['Normal']))
+    story.append(Paragraph("Dataset: Starting_Dataset.csv.csv (5 fields analysis)", styles['Normal']))
     story.append(Spacer(1, 40))
 
     # Executive Summary

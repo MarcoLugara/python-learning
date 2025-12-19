@@ -852,7 +852,7 @@ def create_pdf_report():
     story.append(Paragraph("ATECO Sector Analysis - Enhanced Statistical Report", title_style))
     story.append(Spacer(1, 20))
     story.append(Paragraph(f"Analysis Date: {datetime.datetime.now().strftime('%B %d, %Y')}", styles['Normal']))
-    story.append(Paragraph("Dataset: Starting_Dataset.csv (16 fields grouped by color)", styles['Normal']))
+    story.append(Paragraph("Dataset: Starting_Dataset.csv.csv (16 fields grouped by color)", styles['Normal']))
     story.append(Spacer(1, 20))
 
     # Executive Summary with Statistical Insights

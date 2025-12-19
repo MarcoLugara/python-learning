@@ -69,7 +69,7 @@ def reshape_database(df1):
     # Delete the last useless row
     df = df.drop(df.index[-1])
 
-    df.to_csv('Starting_Dataset.csv', index=False)
+    df.to_csv('Starting_Dataset.csv.csv', index=False)
     df.to_excel('Tidier_Dataset.xlsx', index=False)
 
     """
@@ -184,7 +184,7 @@ def adding_new_Ateco_identifiers(df_Extra, df):
     #print(df.columns)
 
     # Updating the csv and excel
-    df.to_csv('Starting_Dataset.csv', index=False)
+    df.to_csv('Starting_Dataset.csv.csv', index=False)
     df.to_excel('Tidier_Dataset.xlsx', index=False)
     # print(df.columns)
 
@@ -1218,7 +1218,7 @@ def step2():
     })
 
     # Save the updated dataset
-    tidier_df.to_csv('Starting_Dataset.csv', index=False)
+    tidier_df.to_csv('Starting_Dataset.csv.csv', index=False)
 
 def figure5_1(df):
     # Set professional style with thinner grids
@@ -1720,7 +1720,7 @@ df_Extra = pd.read_csv('ATECO_codes.csv')
 adding_new_Ateco_identifiers(df_Extra, df)
 
 # Updating the csv and excel
-df.to_csv('Starting_Dataset.csv', index=False)
+df.to_csv('Starting_Dataset.csv.csv', index=False)
 df.to_excel('Tidier_Dataset.xlsx', index=False)
 
 #Reorder columns
@@ -1729,7 +1729,7 @@ df = df[['Name', 'ateco_section', 'ateco_sectionX', 'Ateco', 'AtecoX', 'ATECO', 
 print(df.columns.to_list())
 
 # Updating the csv and excel
-df.to_csv('Starting_Dataset.csv', index=False)
+df.to_csv('Starting_Dataset.csv.csv', index=False)
 df.to_excel('Tidier_Dataset.xlsx', index=False)
 
 #Second reshaping of the df
@@ -1748,7 +1748,7 @@ figure5(df)
 create_gri_to_esrs_sasb_analysis(df)
 
 START OF THE CODE
-path = "Starting_Dataset.csv"
+path = "Starting_Dataset.csv.csv"
 df = pd.read_csv(path)
 """
 
