@@ -23,7 +23,7 @@ def reshape_dataset(file_path='Starting_Dataset.csv'):
     3. Saving results to CSV and Excel files
 
     Returns:
-    df (pandas.DataFrame): The reshaped dataframe
+    df (pandas.DataFrame): The reshapeed dataframe
     """
 
     # Load the dataset
@@ -42,11 +42,9 @@ def reshape_dataset(file_path='Starting_Dataset.csv'):
 
     # For each field and each remaining year (2023, 2024)
     for year in ['2023', '2024']:
-        rename_mapping[f'Field1_{year}'] = f'Questionari_{year}'
-        rename_mapping[f'Field2_{year}'] = f'Focus_Group_{year}'
-        rename_mapping[f'Field3_{year}'] = f'Workshop_{year}'
-        rename_mapping[f'Field4_{year}'] = f'Group_Meeting_{year}'
-        rename_mapping[f'Field5_{year}'] = f'Incontri_Periodici_{year}'
+        rename_mapping[f'Field1_{year}'] = f'Intranet_Aziendale_{year}'
+        rename_mapping[f'Field2_{year}'] = f'Newsletters_{year}'
+        rename_mapping[f'Field3_{year}'] = f'Comunicati_Stampa_{year}'
 
     # Apply the renaming
     df = df.rename(columns=rename_mapping)
@@ -59,12 +57,12 @@ def reshape_dataset(file_path='Starting_Dataset.csv'):
 
 """
 #OLD CODE
-df = reshape_dataset(file_path='Starting_Dataset.csv')
+df = reshape_dataset('Starting_Dataset.csv')
 """
 
 
 # =============================================================================
-# LOAD AND PREPARE DATA (CUSTOMIZED FOR YOUR 5-FIELD DATASET)
+# LOAD AND PREPARE DATA (CUSTOMIZED FOR YOUR 3-FIELD DATASET)
 # =============================================================================
 
 # Load the data from your CSV
@@ -73,13 +71,13 @@ df = pd.read_csv('Tidier_Dataset.csv')
 # Extract ATECO letter from the 'ateco' column
 df['ateco_letter'] = df['ateco']
 
-# Define field groups - YOUR 5 FIELDS
+# Define field groups - YOUR 3 FIELDS
 field_groups = {
     'All_Fields': {
-        'fields': ['Questionari', 'Focus_Group', 'Workshop', 'Group_Meeting', 'Incontri_Periodici'],
+        'fields': ['Intranet_Aziendale', 'Newsletters', 'Comunicati_Stampa'],
         'color_base': '#4a90e2',  # Blue base color
-        'name': 'All 5 Fields',
-        'max_fields': 5  # Changed from 8 to 5
+        'name': 'All 3 Fields',
+        'max_fields': 3  # Changed from 5 to 3
     }
 }
 
@@ -97,7 +95,7 @@ for year in ['2023', '2024']:
     df[f'total_sum_{year}'] = df[all_field_columns].sum(axis=1)
 
 # =============================================================================
-# COLOR FUNCTIONS (ADJUSTED FOR 5 FIELDS)
+# COLOR FUNCTIONS (ADJUSTED FOR 3 FIELDS)
 # =============================================================================
 
 def get_color_gradient(base_color, num_shades, reverse=False):
@@ -168,7 +166,7 @@ detailed_breakdown = detailed_breakdown.fillna(0)
 sector_order = df['ateco_letter'].value_counts().index
 
 # =============================================================================
-# ENHANCED STATISTICAL ANALYSIS (ADJUSTED FOR 5 FIELDS)
+# ENHANCED STATISTICAL ANALYSIS (ADJUSTED FOR 3 FIELDS)
 # =============================================================================
 
 def calculate_comprehensive_metrics():
@@ -189,7 +187,7 @@ def calculate_comprehensive_metrics():
         for year in ['2023', '2024']:
             # Overall completion metrics
             total_fields_completed = sector_data[f'total_sum_{year}'].sum()
-            max_possible = 5 * total_companies  # CHANGED: 5 fields instead of 8
+            max_possible = 3 * total_companies  # CHANGED: 3 fields instead of 5
             overall_completion = (total_fields_completed / max_possible * 100) if max_possible > 0 else 0
 
             sector_metrics[f'overall_completion_{year}'] = overall_completion
@@ -200,8 +198,8 @@ def calculate_comprehensive_metrics():
             sector_metrics[f'pct_with_any_{year}'] = (
                     companies_with_any / total_companies * 100) if total_companies > 0 else 0
 
-            # Percentage with full completion (5 fields) - CHANGED
-            companies_with_full = len(sector_data[sector_data[f'total_sum_{year}'] == 5])
+            # Percentage with full completion (3 fields) - CHANGED
+            companies_with_full = len(sector_data[sector_data[f'total_sum_{year}'] == 3])
             sector_metrics[f'pct_with_full_{year}'] = (
                     companies_with_full / total_companies * 100) if total_companies > 0 else 0
 
@@ -257,7 +255,7 @@ def calculate_comprehensive_metrics():
     return pd.DataFrame(metrics_list)
 
 # =============================================================================
-# ADVANCED STATISTICAL ANALYSIS (ADJUSTED FOR 5 FIELDS)
+# ADVANCED STATISTICAL ANALYSIS (ADJUSTED FOR 3 FIELDS)
 # =============================================================================
 
 def calculate_advanced_statistics():
@@ -270,9 +268,9 @@ def calculate_advanced_statistics():
         year_stats = {
             'total_companies': len(df),
             'companies_with_any': len(df[df[f'total_sum_{year}'] > 0]),
-            'companies_with_full': len(df[df[f'total_sum_{year}'] == 5]),  # CHANGED: 5 fields
+            'companies_with_full': len(df[df[f'total_sum_{year}'] == 3]),  # CHANGED: 3 fields
             'total_fields_completed': df[f'total_sum_{year}'].sum(),
-            'max_possible_fields': len(df) * 5  # CHANGED: 5 fields
+            'max_possible_fields': len(df) * 3  # CHANGED: 3 fields
         }
 
         year_stats['pct_with_any'] = (year_stats['companies_with_any'] / year_stats['total_companies'] * 100) if \
@@ -297,7 +295,7 @@ def calculate_advanced_statistics():
     for year in ['2023', '2024']:
         distribution = []
         total_companies = len(df)
-        for count in range(0, 6):  # CHANGED: 0 to 5 fields
+        for count in range(0, 4):  # CHANGED: 0 to 3 fields
             companies = len(df[df[f'total_sum_{year}'] == count])
             percentage = (companies / total_companies * 100) if total_companies > 0 else 0
             distribution.append({
@@ -352,7 +350,7 @@ def calculate_advanced_statistics():
     }
 
 # =============================================================================
-# PERFORMANCE CLASSIFICATION (ADJUSTED THRESHOLDS FOR 5 FIELDS)
+# PERFORMANCE CLASSIFICATION (ADJUSTED THRESHOLDS FOR 3 FIELDS)
 # =============================================================================
 
 def classify_sectors(performance_df):
@@ -360,14 +358,14 @@ def classify_sectors(performance_df):
 
     classifications = {}
 
-    # Overall performance classification (adjusted thresholds for 5 fields)
+    # Overall performance classification (adjusted thresholds for 3 fields)
     if 'avg_overall_completion' in performance_df.columns:
         overall_avg = performance_df['avg_overall_completion']
-        classifications['high_performers'] = performance_df[overall_avg > 60] if len(
+        classifications['high_performers'] = performance_df[overall_avg > 70] if len(
             performance_df) > 0 else pd.DataFrame()  # Adjusted threshold
-        classifications['medium_performers'] = performance_df[(overall_avg >= 30) & (overall_avg <= 60)] if len(
+        classifications['medium_performers'] = performance_df[(overall_avg >= 40) & (overall_avg <= 70)] if len(
             performance_df) > 0 else pd.DataFrame()  # Adjusted threshold
-        classifications['low_performers'] = performance_df[overall_avg < 30] if len(
+        classifications['low_performers'] = performance_df[overall_avg < 40] if len(
             performance_df) > 0 else pd.DataFrame()  # Adjusted threshold
 
     # Engagement level classification
@@ -418,7 +416,7 @@ def classify_sectors(performance_df):
     return classifications
 
 # =============================================================================
-# CREATE VISUALIZATIONS - ABSOLUTE VALUES (ADAPTED FOR 5 FIELDS)
+# CREATE VISUALIZATIONS - ABSOLUTE VALUES (ADAPTED FOR 3 FIELDS)
 # =============================================================================
 
 def create_absolute_bar_chart(year_data, year, sector_order):
@@ -610,7 +608,7 @@ def create_absolute_bar_chart(year_data, year, sector_order):
     return fig, sorted_sectors
 
 # =============================================================================
-# CREATE VISUALIZATIONS - PERCENTAGES (ADAPTED FOR 5 FIELDS)
+# CREATE VISUALIZATIONS - PERCENTAGES (ADAPTED FOR 3 FIELDS)
 # =============================================================================
 
 def create_percentage_bar_chart(year_data, year, sector_order):
@@ -629,8 +627,8 @@ def create_percentage_bar_chart(year_data, year, sector_order):
             total_companies = sector_row.iloc[0]['total_companies']
             sector_totals[sector] = total_companies
 
-            # Calculate total possible fields (5 fields per company)
-            total_possible_fields = 5 * total_companies if total_companies > 0 else 1
+            # Calculate total possible fields (3 fields per company)
+            total_possible_fields = 3 * total_companies if total_companies > 0 else 1
 
             # For each group and value (1 to max_fields), calculate contribution percentage
             stratified_dict = {}
@@ -826,14 +824,14 @@ summary_table_data = summary_data.round(1).values.tolist()
 summary_table_headers = ['Sector', 'Total Cos', '2024: Overall %', '2024: Avg Fields', '2024: % Any', 'Trend 23-24']
 
 # =============================================================================
-# ENHANCED PDF REPORT (CUSTOMIZED FOR YOUR 5 FIELDS)
+# ENHANCED PDF REPORT (CUSTOMIZED FOR YOUR 3 FIELDS)
 # =============================================================================
 
 def create_pdf_report():
     from reportlab.lib import colors
 
     # Create PDF document
-    pdf_filename = f"Analysis_Report_5Fields_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    pdf_filename = f"Analysis_Report_3Fields_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
     doc = SimpleDocTemplate(pdf_filename, pagesize=landscape(letter))
 
     # Get styles
@@ -896,11 +894,11 @@ def create_pdf_report():
     story = []
 
     # Title page
-    story.append(Paragraph("ATECO Sector Analysis - 5-Field Dataset Report", title_style))
+    story.append(Paragraph("ATECO Sector Analysis - 3-Field Dataset Report", title_style))
     story.append(Spacer(1, 20))
     story.append(Paragraph(f"Analysis Date: {datetime.datetime.now().strftime('%B %d, %Y')}", styles['Normal']))
-    story.append(Paragraph("Dataset: 5 fields, 2 years (2023-2024)", styles['Normal']))
-    story.append(Paragraph("Field Names: Questionari, Focus_Group, Workshop, Group_Meeting, Incontri_Periodici", styles['Normal']))
+    story.append(Paragraph("Dataset: 3 fields, 2 years (2023-2024)", styles['Normal']))
+    story.append(Paragraph("Field Names: Intranet_Aziendale, Newsletters, Comunicati_Stampa", styles['Normal']))
     story.append(Spacer(1, 20))
 
     # Executive Summary with Statistical Insights
@@ -916,16 +914,16 @@ def create_pdf_report():
         ['Total ATECO Sectors', f"{len(sector_order)}"],
         ['Overall Completion Rate (2024)', f"{key_stats['overall_completion']:.1f}%"],
         ['Companies with Any Data (2024)', f"{key_stats['pct_with_any']:.1f}%"],
-        ['Companies with All 5 Fields (2024)', f"{key_stats['pct_with_full']:.1f}%"],
+        ['Companies with All 3 Fields (2024)', f"{key_stats['pct_with_full']:.1f}%"],
         ['Average Fields per Company (2024)', f"{key_stats['avg_fields_per_company']:.2f}"],
         ['Median Fields per Company (2024)', f"{key_stats['median_fields']:.1f}"],
         ['Standard Deviation (2024)', f"{key_stats['std_fields']:.2f}"],
         ['Overall Trend 2023-2024', f"{trend_stats['overall_completion_growth']:+.1f}%"],
         ['Engagement Growth 2023-2024', f"{trend_stats['pct_with_any_growth']:+.1f}%"],
-        ['High Performing Sectors (>60%)', f"{len(sector_classifications.get('high_performers', pd.DataFrame()))}"],
-        ['Medium Performing Sectors (30-60%)',
+        ['High Performing Sectors (>70%)', f"{len(sector_classifications.get('high_performers', pd.DataFrame()))}"],
+        ['Medium Performing Sectors (40-70%)',
          f"{len(sector_classifications.get('medium_performers', pd.DataFrame()))}"],
-        ['Low Performing Sectors (<30%)', f"{len(sector_classifications.get('low_performers', pd.DataFrame()))}"]
+        ['Low Performing Sectors (<40%)', f"{len(sector_classifications.get('low_performers', pd.DataFrame()))}"]
     ]
 
     key_table = Table(key_data, colWidths=[240, 160])
@@ -954,20 +952,18 @@ def create_pdf_report():
     # Section 1: Distribution Analysis
     story.append(Paragraph("1. Statistical Distribution Analysis", heading1_style))
     story.append(
-        Paragraph("This section shows how many companies completed different numbers of fields (0-5).", normal_style))
+        Paragraph("This section shows how many companies completed different numbers of fields (0-3).", normal_style))
 
     # Distribution statistics table
     dist_headers = ['Fields', 'Companies (2023)', '%', 'Companies (2024)', '%']
     dist_data = [dist_headers]
 
-    # Show distributions for 0-5 fields
+    # Show distributions for 0-3 fields
     ranges = [
         (0, 0, "0"),
         (1, 1, "1"),
         (2, 2, "2"),
-        (3, 3, "3"),
-        (4, 4, "4"),
-        (5, 5, "5")
+        (3, 3, "3")
     ]
 
     for start, end, label in ranges:
@@ -1065,7 +1061,7 @@ def create_pdf_report():
         "Each bar shows what percentage of the total possible fields were completed in each sector. Sorted by percentage (descending).",
         normal_style))
     story.append(Paragraph("How to read: Taller bars = higher percentage of fields completed", bullet_style))
-    story.append(Paragraph("Note: 100% would mean ALL companies completed ALL 5 fields", bullet_style))
+    story.append(Paragraph("Note: 100% would mean ALL companies completed ALL 3 fields", bullet_style))
     story.append(Paragraph("Color meaning: Same as absolute charts (see legend)", bullet_style))
     story.append(Paragraph("n= shows total number of companies in that sector", bullet_style))
 
@@ -1092,7 +1088,7 @@ def create_pdf_report():
     high_performers = sector_classifications.get('high_performers', pd.DataFrame())
     if len(high_performers) > 0:
         story.append(
-            Paragraph(f"High Performers (>60% overall completion): {len(high_performers)} sectors", heading2_style))
+            Paragraph(f"High Performers (>70% overall completion): {len(high_performers)} sectors", heading2_style))
         story.append(Paragraph("These sectors consistently completed the highest percentage of fields:", normal_style))
         for _, row in high_performers.sort_values('avg_overall_completion', ascending=False).iterrows():
             story.append(Paragraph(
@@ -1108,7 +1104,7 @@ def create_pdf_report():
     # Medium Performers
     medium_performers = sector_classifications.get('medium_performers', pd.DataFrame())
     if len(medium_performers) > 0:
-        story.append(Paragraph(f"Medium Performers (30-60% overall completion): {len(medium_performers)} sectors",
+        story.append(Paragraph(f"Medium Performers (40-70% overall completion): {len(medium_performers)} sectors",
                                heading2_style))
         story.append(Paragraph("These sectors completed a moderate percentage of fields:", normal_style))
         for _, row in medium_performers.sort_values('avg_overall_completion', ascending=False).iterrows():
@@ -1126,7 +1122,7 @@ def create_pdf_report():
     low_performers = sector_classifications.get('low_performers', pd.DataFrame())
     if len(low_performers) > 0:
         story.append(
-            Paragraph(f"Low Performers (<30% overall completion): {len(low_performers)} sectors", heading2_style))
+            Paragraph(f"Low Performers (<40% overall completion): {len(low_performers)} sectors", heading2_style))
         story.append(Paragraph("These sectors completed the lowest percentage of fields:", normal_style))
         for _, row in low_performers.sort_values('avg_overall_completion', ascending=False).iterrows():
             story.append(Paragraph(
@@ -1256,12 +1252,12 @@ def create_pdf_report():
     insights = [
         f"1. Overall Performance: In 2024, companies completed {key_stats['overall_completion']:.1f}% of all possible fields.",
         f"2. Company Participation: {key_stats['pct_with_any']:.1f}% of companies completed at least 1 field in 2024.",
-        f"3. Full Compliance: Only {key_stats['pct_with_full']:.1f}% of companies completed all 5 fields in 2024.",
+        f"3. Full Compliance: Only {key_stats['pct_with_full']:.1f}% of companies completed all 3 fields in 2024.",
         f"4. Average Completion: Each company completed an average of {key_stats['avg_fields_per_company']:.1f} fields in 2024.",
         f"5. Most Common: The most common number of completed fields is {mode_str}.",
         f"6. Yearly Growth: From 2023 to 2024, completion increased by {trend_stats['overall_completion_growth']:+.1f}%.",
-        f"7. Best Performing Sectors: {len(sector_classifications.get('high_performers', pd.DataFrame()))} sectors consistently completed >60% of fields.",
-        f"8. Areas for Improvement: {len(sector_classifications.get('low_performers', pd.DataFrame()))} sectors completed <30% of fields."
+        f"7. Best Performing Sectors: {len(sector_classifications.get('high_performers', pd.DataFrame()))} sectors consistently completed >70% of fields.",
+        f"8. Areas for Improvement: {len(sector_classifications.get('low_performers', pd.DataFrame()))} sectors completed <40% of fields."
     ]
 
     for insight in insights:
@@ -1288,7 +1284,7 @@ def create_pdf_report():
 print(f"\n✓ Analysis complete!")
 
 # Generate PDF report
-print(f"✓ Generating enhanced PDF report for 5-field dataset...")
+print(f"✓ Generating enhanced PDF report for 3-field dataset...")
 pdf_file = create_pdf_report()
 
 if pdf_file:
@@ -1303,8 +1299,8 @@ print(f"  - Absolute charts: {len(valid_abs)} created")
 print(f"  - Percentage charts: {len(valid_pct)} created")
 
 print(f"\n✓ Dataset Specifications:")
-print(f"  - Number of fields: 5")
-print(f"  - Field names: Questionari, Focus_Group, Workshop, Group_Meeting, Incontri_Periodici")
+print(f"  - Number of fields: 3")
+print(f"  - Field names: Intranet_Aziendale, Newsletters, Comunicati_Stampa")
 print(f"  - Years analyzed: 2023, 2024")
 print(f"  - Number of companies: {len(df)}")
 print(f"  - Number of ATECO sectors: {len(sector_order)}")
