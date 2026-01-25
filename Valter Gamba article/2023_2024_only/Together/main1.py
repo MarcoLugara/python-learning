@@ -14,6 +14,8 @@ import os
 import colorsys
 from scipy import stats
 
+''' 
+#OLD CODE
 def reshape_dataset(file_path='Starting_Dataset.csv'):
     """
     Process the dataset by:
@@ -81,11 +83,8 @@ def reshape_dataset(file_path='Starting_Dataset.csv'):
 
     return df
 
-'''
-#OLD CODE
 df = reshape_dataset()
 '''
-
 
 # =============================================================================
 # LOAD AND PREPARE DATA
@@ -487,7 +486,6 @@ def classify_sectors(performance_df):
 
     return classifications
 
-
 # =============================================================================
 # CREATE VISUALIZATIONS - ABSOLUTE VALUES (FIXED)
 # =============================================================================
@@ -863,77 +861,202 @@ def create_percentage_bar_chart(year_data, year, sector_order):
 
     return fig, sorted_sector_names
 
-
-# =============================================================================
-# CREATE ALL VISUALIZATIONS
-# =============================================================================
-
-# Create visualizations for each year
-image_paths_absolute = []
-image_paths_percentage = []
-all_sorted_sectors = {}
-
-print("  - Creating absolute value charts...")
-for year in ['2023', '2024']:
-    try:
-        year_data = detailed_breakdown[detailed_breakdown['year'] == year]
-        fig_abs, sorted_sectors = create_absolute_bar_chart(year_data, year, sector_order)
-        abs_path = f'Image_{year}_Absolute.png'
-        plt.savefig(abs_path, dpi=300, bbox_inches='tight')
-        image_paths_absolute.append(abs_path)
-        all_sorted_sectors[f'{year}_abs'] = sorted_sectors
-        plt.close()
-        print(f"    ✓ Created {abs_path}")
-    except Exception as e:
-        print(f"    ✗ Error creating absolute chart for {year}: {str(e)[:100]}...")
-        import traceback
-
-        print(f"    Detailed error: {traceback.format_exc()[:200]}...")
-        image_paths_absolute.append(None)
-
-print("  - Creating percentage charts...")
-for year in ['2023', '2024']:
-    try:
-        year_data = detailed_breakdown[detailed_breakdown['year'] == year]
-        fig_pct, sorted_sectors = create_percentage_bar_chart(year_data, year, sector_order)
-        pct_path = f'Image_{year}_Percentage.png'
-        plt.savefig(pct_path, dpi=300, bbox_inches='tight')
-        image_paths_percentage.append(pct_path)
-        all_sorted_sectors[f'{year}_pct'] = sorted_sectors
-        plt.close()
-        print(f"    ✓ Created {pct_path}")
-    except Exception as e:
-        print(f"    ✗ Error creating percentage chart for {year}: {str(e)[:100]}...")
-        image_paths_percentage.append(None)
-
-# =============================================================================
-# PERFORM COMPREHENSIVE ANALYSIS
-# =============================================================================
-
-print("  - Calculating performance metrics...")
-performance_analysis = calculate_comprehensive_metrics()
-
-print("  - Calculating advanced statistics...")
-advanced_stats = calculate_advanced_statistics()
-
-print("  - Classifying sectors...")
-sector_classifications = classify_sectors(performance_analysis)
-
-# Prepare summary table for PDF
-summary_data = performance_analysis[['Sector', 'Total_Companies',
-                                     'overall_completion_2024',
-                                     'avg_fields_per_company_2024',
-                                     'pct_with_any_2024',
-                                     'trend_overall_23_24']].copy()
-summary_data = summary_data.sort_values('overall_completion_2024', ascending=False)
-summary_data.columns = ['Sector', 'Total Cos', '2024: Overall %', '2024: Avg Fields', '2024: % Any', 'Trend 23-24']
-summary_table_data = summary_data.round(1).values.tolist()
-summary_table_headers = ['Sector', 'Total Cos', '2024: Overall %', '2024: Avg Fields', '2024: % Any', 'Trend 23-24']
-
-
 # =============================================================================
 # ENHANCED PDF REPORT WITH STATISTICAL ANALYSIS (ADAPTED FOR 2 YEARS)
 # =============================================================================
+
+# =============================================================================
+# CREATE 2024 GROUPED BAR CHART
+# =============================================================================
+
+def create_2024_grouped_bar_chart():
+    """Create a bar graph for 2024 showing ATECO sectors with bars divided by field groups."""
+
+    # Filter data for 2024
+    year = '2024'
+    year_data = detailed_breakdown[detailed_breakdown['year'] == year]
+
+    # Create figure
+    fig, ax = plt.subplots(figsize=(14, 8))
+
+    # Set up better spacing
+    plt.subplots_adjust(left=0.08, right=0.95, bottom=0.15, top=0.9)
+
+    # Calculate counts for each sector and group
+    sector_group_counts = {}
+    sector_totals = {}
+
+    # Get unique sectors
+    unique_sectors = sorted(year_data['ateco_letter'].unique())
+
+    for sector in unique_sectors:
+        sector_row = year_data[year_data['ateco_letter'] == sector]
+        if not sector_row.empty:
+            total_companies = sector_row.iloc[0]['total_companies']
+            sector_totals[sector] = total_companies
+
+            # Calculate counts for each group
+            group_counts = {}
+
+            # Red Group (Fields 1-8): Companies with at least one field completed
+            # We need to count companies that have sum > 0 in Red_Group_sum_2024
+            # But from our detailed_breakdown, we have counts by value. We need to sum all counts > 0
+            red_count = 0
+            for value in range(1, 9):  # 1 to 8
+                count = sector_row.iloc[0].get(f'Red_Group_{value}', 0)
+                red_count += count
+            group_counts['Red_Group'] = red_count
+
+            # Blue Group (Fields 9-13)
+            blue_count = 0
+            for value in range(1, 6):  # 1 to 5 (since max_fields = 5)
+                count = sector_row.iloc[0].get(f'Blue_Group_{value}', 0)
+                blue_count += count
+            group_counts['Blue_Group'] = blue_count
+
+            # Green Group (Fields 14-16)
+            green_count = 0
+            for value in range(1, 4):  # 1 to 3 (since max_fields = 3)
+                count = sector_row.iloc[0].get(f'Green_Group_{value}', 0)
+                green_count += count
+            group_counts['Green_Group'] = green_count
+
+            sector_group_counts[sector] = group_counts
+
+    # Sort sectors by total companies (descending)
+    sorted_sectors = sorted(sector_totals.items(), key=lambda x: x[1], reverse=True)
+    sorted_sector_names = [sector for sector, _ in sorted_sectors]
+
+    # Set up bar positions
+    x_positions = np.arange(len(sorted_sector_names))
+    bar_width = 0.6
+
+    # Define group colors and order
+    group_order = ['Red_Group', 'Blue_Group', 'Green_Group']
+    group_colors_map = {
+        'Red_Group': '#ff9800',  # Orange/amber
+        'Blue_Group': '#4d96ff',  # Blue
+        'Green_Group': '#6bcf7f'  # Green
+    }
+    # CHANGED: Updated group names (removed F1-F8 etc.)
+    group_names = {
+        'Red_Group': 'Collaborative',
+        'Blue_Group': 'Consultative',
+        'Green_Group': 'Informative'
+    }
+
+    # Calculate total for each sector (sum of all groups)
+    # Note: A company might be counted in multiple groups if they have fields in multiple groups
+    # So total is not just the sum of the three groups (that would double count)
+    # Instead, we need to calculate unique companies with at least one field in ANY group
+    # We'll calculate this from the original dataframe
+
+    # Calculate unique companies per sector with at least one field completed
+    unique_counts = {}
+    for sector in sorted_sector_names:
+        # Get sector data from original df for 2024
+        sector_data = df[df['ateco_letter'] == sector]
+        # Count companies with at least one field completed in 2024
+        companies_with_any = len(sector_data[sector_data[f'total_sum_{year}'] > 0])
+        unique_counts[sector] = companies_with_any
+
+    # Create grouped bars
+    group_positions = {}
+    bar_offset = bar_width / 3
+
+    for i, group in enumerate(group_order):
+        # Position for this group's bars
+        if group == 'Red_Group':
+            x_offset = -bar_offset
+        elif group == 'Green_Group':
+            x_offset = bar_offset
+        else:  # Blue_Group (middle)
+            x_offset = 0
+
+        group_positions[group] = x_positions + x_offset
+
+        # Get counts for this group across all sectors
+        counts = []
+        for sector in sorted_sector_names:
+            counts.append(sector_group_counts.get(sector, {}).get(group, 0))
+
+        # Create bars for this group
+        ax.bar(group_positions[group], counts, width=bar_offset * 0.8,
+               color=group_colors_map[group], alpha=0.8, edgecolor='black',
+               linewidth=0.5, label=group_names[group])
+
+    # Customize the plot
+    ax.set_title(f'{year} - Companies with Completed Fields by Group and ATECO Sector',
+                 fontsize=16, fontweight='bold', pad=20)
+    ax.set_xlabel('ATECO Sector', fontsize=12)
+    # CHANGED: Updated y-axis label
+    ax.set_ylabel('Stakeholder engagement', fontsize=12)
+
+    # Set x-ticks at sector positions (not group positions)
+    ax.set_xticks(x_positions)
+    ax.set_xticklabels(sorted_sector_names, rotation=45, ha='right', fontsize=11)
+
+    # Add grid
+    ax.grid(axis='y', alpha=0.3, linestyle='--')
+
+    # Add value labels on top of each bar
+    for group in group_order:
+        x_group = group_positions[group]
+        for i, sector in enumerate(sorted_sector_names):
+            count = sector_group_counts.get(sector, {}).get(group, 0)
+            if count > 0:
+                # Position the label slightly above the bar
+                ax.text(x_group[i], count + (ax.get_ylim()[1] * 0.01),
+                        f'{int(count)}', ha='center', va='bottom',
+                        fontsize=8, fontweight='bold')
+
+    # Calculate maximum bar height to set y-axis limit
+    max_bar_height = 0
+    for sector in sorted_sector_names:
+        for group in group_order:
+            count = sector_group_counts.get(sector, {}).get(group, 0)
+            max_bar_height = max(max_bar_height, count)
+
+    # ADDED: Set y-axis limit to 50 (as requested)
+    ax.set_ylim(top=50)
+
+    # Add total unique companies label at the top of each sector group
+    for i, sector in enumerate(sorted_sector_names):
+        total_unique = unique_counts.get(sector, 0)
+        # Position above the highest bar in this sector group
+        max_height = 0
+        for group in group_order:
+            count = sector_group_counts.get(sector, {}).get(group, 0)
+            max_height = max(max_height, count)
+
+        if max_height > 0:
+            # CHANGED: Changed color to black
+            ax.text(x_positions[i], max_height + (ax.get_ylim()[1] * 0.03),
+                    f'Total: {total_unique}', ha='center', va='bottom',
+                    fontsize=10, fontweight='bold', color='black')
+
+    # Add 'n' labels at the bottom (total companies in sector)
+    y_min, y_max = ax.get_ylim()
+    offset = y_max * 0.08
+    ax.set_ylim(bottom=y_min - offset)
+
+    n_label_y = y_min - offset * 0.4
+    for i, sector in enumerate(sorted_sector_names):
+        total_companies = sector_totals.get(sector, 0)
+        ax.text(x_positions[i], n_label_y, f'n={total_companies}',
+                ha='center', va='top', fontsize=9, color='gray', fontweight='bold')
+
+    # Add legend with updated title
+    # CHANGED: Updated legend title
+    ax.legend(title='Stakeholder engagement metric', title_fontsize=11, fontsize=10,
+              loc='upper right', frameon=True, fancybox=True, shadow=True)
+
+    # Add a note about what the chart shows
+    note_text = ("n = number of companies.")
+    plt.figtext(0.02, 0.02, note_text, fontsize=9, color='gray',
+                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightyellow', alpha=0.8))
+
+    return fig, sorted_sector_names
 
 def create_pdf_report():
     # Import colors locally to avoid conflicts
@@ -1399,49 +1522,109 @@ def create_pdf_report():
 # MAIN EXECUTION
 # =============================================================================
 
-if __name__ == "__main__":
+"""
+OLD EXECUTION
+# =============================================================================
+# CREATE ALL VISUALIZATIONS
+# =============================================================================
+
+# Create visualizations for each year
+image_paths_absolute = []
+image_paths_percentage = []
+all_sorted_sectors = {}
+
+print("  - Creating absolute value charts...")
+for year in ['2023', '2024']:
     try:
-        print(f"\n✓ Analysis complete!")
-
-        # Generate PDF report
-        print(f"✓ Generating enhanced PDF report...")
-        pdf_file = create_pdf_report()
-
-        if pdf_file:
-            print(f"✓ Enhanced PDF report successfully created: {pdf_file}")
-        else:
-            print("✗ Failed to create PDF report")
-
-        print(f"\n✓ Statistical Summary:")
-        if 'yearly_stats' in advanced_stats and '2024' in advanced_stats['yearly_stats']:
-            key_stats = advanced_stats['yearly_stats']['2024']
-            print(f"  - Overall completion (2024): {key_stats['overall_completion']:.1f}%")
-            print(f"  - Companies with any data (2024): {key_stats['pct_with_any']:.1f}%")
-            print(f"  - Average fields per company (2024): {key_stats['avg_fields_per_company']:.2f}")
-            print(f"  - Standard deviation (2024): {key_stats['std_fields']:.2f}")
-
-        if 'trend_stats' in advanced_stats:
-            print(f"  - Overall trend 2023-2024: {advanced_stats['trend_stats']['overall_completion_growth']:+.1f}%")
-
-        print(f"  - High performing sectors: {len(sector_classifications.get('high_performers', pd.DataFrame()))}")
-        print(f"  - Medium performing sectors: {len(sector_classifications.get('medium_performers', pd.DataFrame()))}")
-        print(f"  - Low performing sectors: {len(sector_classifications.get('low_performers', pd.DataFrame()))}")
-
-        print(f"\n✓ Image files created:")
-        valid_abs = [p for p in image_paths_absolute if p is not None]
-        valid_pct = [p for p in image_paths_percentage if p is not None]
-        print(f"  - Absolute charts: {len(valid_abs)} created")
-        print(f"  - Percentage charts: {len(valid_pct)} created")
-
-        print(f"\n✓ Key Adaptations for 2-Year Analysis:")
-        print(f"  1. Analysis limited to 2023 and 2024 only")
-        print(f"  2. All trend calculations updated to 2023-2024")
-        print(f"  3. Table headers and labels updated accordingly")
-        print(f"  4. Data mapping from original column names to Field1-Field16 structure")
-
+        year_data = detailed_breakdown[detailed_breakdown['year'] == year]
+        fig_abs, sorted_sectors = create_absolute_bar_chart(year_data, year, sector_order)
+        abs_path = f'Image_{year}_Absolute.png'
+        plt.savefig(abs_path, dpi=300, bbox_inches='tight')
+        image_paths_absolute.append(abs_path)
+        all_sorted_sectors[f'{year}_abs'] = sorted_sectors
+        plt.close()
+        print(f"    ✓ Created {abs_path}")
     except Exception as e:
-        print(f"✗ Error during analysis: {e}")
-        print(f"Error type: {type(e).__name__}")
+        print(f"    ✗ Error creating absolute chart for {year}: {str(e)[:100]}...")
         import traceback
 
-        print(f"Error details: {traceback.format_exc()}")
+        print(f"    Detailed error: {traceback.format_exc()[:200]}...")
+        image_paths_absolute.append(None)
+
+print("  - Creating percentage charts...")
+for year in ['2023', '2024']:
+    try:
+        year_data = detailed_breakdown[detailed_breakdown['year'] == year]
+        fig_pct, sorted_sectors = create_percentage_bar_chart(year_data, year, sector_order)
+        pct_path = f'Image_{year}_Percentage.png'
+        plt.savefig(pct_path, dpi=300, bbox_inches='tight')
+        image_paths_percentage.append(pct_path)
+        all_sorted_sectors[f'{year}_pct'] = sorted_sectors
+        plt.close()
+        print(f"    ✓ Created {pct_path}")
+    except Exception as e:
+        print(f"    ✗ Error creating percentage chart for {year}: {str(e)[:100]}...")
+        image_paths_percentage.append(None)
+
+# =============================================================================
+# PERFORM COMPREHENSIVE ANALYSIS
+# =============================================================================
+
+print("  - Calculating performance metrics...")
+performance_analysis = calculate_comprehensive_metrics()
+
+print("  - Calculating advanced statistics...")
+advanced_stats = calculate_advanced_statistics()
+
+print("  - Classifying sectors...")
+sector_classifications = classify_sectors(performance_analysis)
+
+# Prepare summary table for PDF
+summary_data = performance_analysis[['Sector', 'Total_Companies',
+                                     'overall_completion_2024',
+                                     'avg_fields_per_company_2024',
+                                     'pct_with_any_2024',
+                                     'trend_overall_23_24']].copy()
+summary_data = summary_data.sort_values('overall_completion_2024', ascending=False)
+summary_data.columns = ['Sector', 'Total Cos', '2024: Overall %', '2024: Avg Fields', '2024: % Any', 'Trend 23-24']
+summary_table_data = summary_data.round(1).values.tolist()
+summary_table_headers = ['Sector', 'Total Cos', '2024: Overall %', '2024: Avg Fields', '2024: % Any', 'Trend 23-24']
+print(f"\n✓ Analysis complete!"
+# Generate PDF report
+print(f"✓ Generating enhanced PDF report...")
+pdf_file = create_pdf_report(
+if pdf_file:
+    print(f"✓ Enhanced PDF report successfully created: {pdf_file}")
+else:
+    print("✗ Failed to create PDF report"
+print(f"\n✓ Statistical Summary:")
+if 'yearly_stats' in advanced_stats and '2024' in advanced_stats['yearly_stats']:
+    key_stats = advanced_stats['yearly_stats']['2024']
+    print(f"  - Overall completion (2024): {key_stats['overall_completion']:.1f}%")
+    print(f"  - Companies with any data (2024): {key_stats['pct_with_any']:.1f}%")
+    print(f"  - Average fields per company (2024): {key_stats['avg_fields_per_company']:.2f}")
+    print(f"  - Standard deviation (2024): {key_stats['std_fields']:.2f}")
+
+if 'trend_stats' in advanced_stats:
+    print(f"  - Overall trend 2023-2024: {advanced_stats['trend_stats']['overall_completion_growth']:+.1f}%"
+    print(f"  - High performing sectors: {len(sector_classifications.get('high_performers', pd.DataFrame()))}")
+    print(f"  - Medium performing sectors: {len(sector_classifications.get('medium_performers', pd.DataFrame()))}")
+    print(f"  - Low performing sectors: {len(sector_classifications.get('low_performers', pd.DataFrame()))}"
+    print(f"\n✓ Image files created:")
+    valid_abs = [p for p in image_paths_absolute if p is not None]
+    valid_pct = [p for p in image_paths_percentage if p is not None]
+    print(f"  - Absolute charts: {len(valid_abs)} created")
+    print(f"  - Percentage charts: {len(valid_pct)} created"
+    print(f"\n✓ Key Adaptations for 2-Year Analysis:")
+    print(f"  1. Analysis limited to 2023 and 2024 only")
+    print(f"  2. All trend calculations updated to 2023-2024")
+    print(f"  3. Table headers and labels updated accordingly")
+    print(f"  4. Data mapping from original column names to Field1-Field16 structure")
+"""
+
+# Create and save the chart
+print("Creating 2024 grouped bar chart...")
+fig_2024, sorted_sectors_2024 = create_2024_grouped_bar_chart()
+image_path = 'Image_2024_Grouped_Bars.png'
+plt.savefig(image_path, dpi=300, bbox_inches='tight')
+print(f"✓ Created {image_path}")

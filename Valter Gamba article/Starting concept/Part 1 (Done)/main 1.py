@@ -1024,6 +1024,529 @@ def figure2_1(df):
     plt.savefig('fig2_1.png', dpi=300, bbox_inches='tight')
     #plt.show()
 
+def figure2_2(df, extra_df):
+    """
+    Create a stacked bar chart showing adoption of all four frameworks (ESRS, SASB, GRI, AA1000)
+    by ATECO section for 2024. Updated with requested features.
+    """
+    # Merge datasets to get AA1000 data
+    aa1000_columns = ['Name', 'AA1000_2024']
+
+    # Merge on company name
+    merged_df = pd.merge(df, extra_df[aa1000_columns], on='Name', how='left')
+    merged_df['AA1000_2024'] = merged_df['AA1000_2024'].fillna(0).astype(int)
+
+    # Load and process the dataset
+    data = merged_df.copy()
+
+    # Create adoption categories for 2024
+    data['ESRS_2024_flag'] = data['ESRS_2024']
+    data['SASB_2024_flag'] = data['SASB_2024']
+    data['GRI_2024_flag'] = data['GRI_2024']
+    data['AA1000_2024_flag'] = data['AA1000_2024']
+
+    # Filter companies that have at least one of the frameworks in 2024
+    adopters_2024 = data[
+        (data['ESRS_2024'] == 1) |
+        (data['SASB_2024'] == 1) |
+        (data['GRI_2024'] == 1) |
+        (data['AA1000_2024'] == 1)
+        ].copy()
+
+    # Use ATECO section (1-character)
+    adopters_2024['ateco_section'] = adopters_2024['ateco']
+
+    # Group by ATECO section and sum adoption for each framework
+    ateco_adoption = adopters_2024.groupby('ateco_section').agg({
+        'ESRS_2024_flag': 'sum',
+        'SASB_2024_flag': 'sum',
+        'GRI_2024_flag': 'sum',
+        'AA1000_2024_flag': 'sum'
+    }).fillna(0)
+
+    # Calculate total adopters per ATECO section
+    ateco_adoption['Total'] = ateco_adoption.sum(axis=1)
+    ateco_adoption = ateco_adoption.sort_values('Total', ascending=False)
+
+    # Also get total number of companies in each sector (including non-adopters)
+    total_companies_per_sector = data.groupby('ateco').size()
+    ateco_adoption['Total_Companies'] = ateco_adoption.index.map(total_companies_per_sector)
+
+    # Create figure with larger size for better readability
+    plt.figure(figsize=(18, 12), facecolor='#f0f8ff')
+    ax = plt.gca()
+    ax.set_facecolor('#e6f0fa')
+
+    # Create stacked bar plot - order: ESRS, SASB, GRI, AA1000
+    x = np.arange(len(ateco_adoption))
+    bottom = np.zeros(len(ateco_adoption))
+
+    # Define distinct colors for each framework
+    colors = ['#2E86AB', '#A23B72', '#4CAF50', '#FF9800']  # ESRS, SASB, GRI, AA1000
+
+    # ESRS bar
+    bars1 = plt.bar(x, ateco_adoption['ESRS_2024_flag'].values, color=colors[0],
+                    edgecolor='white', linewidth=0.5, label='ESRS', alpha=0.9)
+    bottom += ateco_adoption['ESRS_2024_flag'].values
+
+    # SASB bar
+    bars2 = plt.bar(x, ateco_adoption['SASB_2024_flag'].values, bottom=bottom, color=colors[1],
+                    edgecolor='white', linewidth=0.5, label='SASB', alpha=0.9)
+    bottom += ateco_adoption['SASB_2024_flag'].values
+
+    # GRI bar
+    bars3 = plt.bar(x, ateco_adoption['GRI_2024_flag'].values, bottom=bottom, color=colors[2],
+                    edgecolor='white', linewidth=0.5, label='GRI', alpha=0.9)
+    bottom += ateco_adoption['GRI_2024_flag'].values
+
+    # AA1000 bar
+    bars4 = plt.bar(x, ateco_adoption['AA1000_2024_flag'].values, bottom=bottom, color=colors[3],
+                    edgecolor='white', linewidth=0.5, label='AA1000', alpha=0.9)
+
+    # Customize the plot
+    plt.xlabel('ATECO Sector', fontsize=14, fontweight='bold')
+    plt.ylabel('Number of standard adoptions', fontsize=14, fontweight='bold')
+
+    # Keep only sector letter and company count
+    x_tick_labels = []
+    for idx in ateco_adoption.index:
+        total_in_sector = ateco_adoption.loc[idx, 'Total_Companies']
+        x_tick_labels.append(f'{idx}\nn={total_in_sector}')
+
+    plt.xticks(x, x_tick_labels, fontsize=11, rotation=45, ha='right')
+    plt.yticks(fontsize=12)
+
+    # Add total value labels on top of each complete bar
+    for i, (idx, row) in enumerate(ateco_adoption.iterrows()):
+        total = row['Total']
+        if total > 0:
+            # Total number on top of each complete bar
+            y_offset = max(ateco_adoption['Total']) * 0.01  # Smaller offset
+            ax.text(i, total + y_offset, f'{int(total)}', ha='center', va='bottom',
+                    fontsize=13, fontweight='bold', color='black')
+
+    # FIXED: Add sub-bar labels correctly - using the actual values from each segment
+    # Convert Series to numpy arrays for integer indexing
+    esrs_values = ateco_adoption['ESRS_2024_flag'].values
+    sasb_values = ateco_adoption['SASB_2024_flag'].values
+    gri_values = ateco_adoption['GRI_2024_flag'].values
+    aa1000_values = ateco_adoption['AA1000_2024_flag'].values
+
+    # Calculate cumulative sums for positioning
+    cum_bottom = np.zeros(len(ateco_adoption))
+
+    # Add labels for ESRS segments
+    for i, value in enumerate(esrs_values):
+        if value > 0:
+            # Position at 90% height of this segment
+            y_pos = cum_bottom[i] + (value * 0.9)
+            ax.text(i, y_pos, f'{int(value)}', ha='center', va='center',
+                    fontsize=9, fontweight='bold', color='black')
+    cum_bottom += esrs_values
+
+    # Add labels for SASB segments
+    for i, value in enumerate(sasb_values):
+        if value > 0:
+            # Position at 90% height of this segment
+            y_pos = cum_bottom[i] + (value * 0.9)
+            ax.text(i, y_pos, f'{int(value)}', ha='center', va='center',
+                    fontsize=9, fontweight='bold', color='black')
+    cum_bottom += sasb_values
+
+    # Add labels for GRI segments
+    for i, value in enumerate(gri_values):
+        if value > 0:
+            # Position at 90% height of this segment
+            y_pos = cum_bottom[i] + (value * 0.9)
+            ax.text(i, y_pos, f'{int(value)}', ha='center', va='center',
+                    fontsize=9, fontweight='bold', color='black')
+    cum_bottom += gri_values
+
+    # Add labels for AA1000 segments
+    for i, value in enumerate(aa1000_values):
+        if value > 0:
+            # Position at 90% height of this segment
+            y_pos = cum_bottom[i] + (value * 0.9)
+            ax.text(i, y_pos, f'{int(value)}', ha='center', va='center',
+                    fontsize=9, fontweight='bold', color='black')
+
+    # Create custom legend with note about n
+    from matplotlib.patches import Patch
+
+    # Create legend elements
+    legend_elements = [
+        Patch(facecolor=colors[0], label='ESRS'),
+        Patch(facecolor=colors[1], label='SASB'),
+        Patch(facecolor=colors[2], label='GRI'),
+        Patch(facecolor=colors[3], label='AA1000')
+    ]
+
+    # Create legend with title
+    legend = ax.legend(handles=legend_elements, title='Frameworks',
+                       title_fontsize=13, fontsize=12,
+                       loc='upper right', framealpha=0.95, edgecolor='gray')
+
+    # Add note below legend
+    ax.text(0.98, 0.82, '(n = total companies in sector)', transform=ax.transAxes,
+            fontsize=10, ha='right', va='bottom', color='gray', style='italic')
+
+    # Add a subtle grid and fancy border
+    plt.grid(True, which='both', linestyle='--', alpha=0.3, linewidth=0.5, axis='y')
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    ax.set_axisbelow(True)
+
+    # Add horizontal lines for better readability
+    ax.yaxis.grid(True, linestyle='--', alpha=0.3)
+
+    # Add a title
+    plt.title('Framework Adoption by ATECO Sector (2024)',
+              fontsize=16, fontweight='bold', pad=20)
+
+    # Adjust layout
+    plt.tight_layout()
+
+    # Show and save the plot
+    plt.savefig('extra_image_1_2024.png', dpi=300, bbox_inches='tight')
+
+    return ateco_adoption
+
+def figure2_3(df, extra_df):
+    """
+    Create a stacked bar chart showing adoption of all four frameworks (ESRS, SASB, GRI, AA1000)
+    by ATECO section for 2023. Updated with requested features.
+    """
+    # Merge datasets to get AA1000 data
+    aa1000_columns = ['Name', 'AA1000_2023']
+
+    # Merge on company name
+    merged_df = pd.merge(df, extra_df[aa1000_columns], on='Name', how='left')
+    merged_df['AA1000_2023'] = merged_df['AA1000_2023'].fillna(0).astype(int)
+
+    # Load and process the dataset
+    data = merged_df.copy()
+
+    # Create adoption categories for 2023
+    data['ESRS_2023_flag'] = data['ESRS_2023']
+    data['SASB_2023_flag'] = data['SASB_2023']
+    data['GRI_2023_flag'] = data['GRI_2023']
+    data['AA1000_2023_flag'] = data['AA1000_2023']
+
+    # Filter companies that have at least one of the frameworks in 2023
+    adopters_2023 = data[
+        (data['ESRS_2023'] == 1) |
+        (data['SASB_2023'] == 1) |
+        (data['GRI_2023'] == 1) |
+        (data['AA1000_2023'] == 1)
+        ].copy()
+
+    # Use ATECO section (1-character)
+    adopters_2023['ateco_section'] = adopters_2023['ateco']
+
+    # Group by ATECO section and sum adoption for each framework
+    ateco_adoption = adopters_2023.groupby('ateco_section').agg({
+        'ESRS_2023_flag': 'sum',
+        'SASB_2023_flag': 'sum',
+        'GRI_2023_flag': 'sum',
+        'AA1000_2023_flag': 'sum'
+    }).fillna(0)
+
+    # Calculate total adopters per ATECO section
+    ateco_adoption['Total'] = ateco_adoption.sum(axis=1)
+    ateco_adoption = ateco_adoption.sort_values('Total', ascending=False)
+
+    # Also get total number of companies in each sector (including non-adopters)
+    total_companies_per_sector = data.groupby('ateco').size()
+    ateco_adoption['Total_Companies'] = ateco_adoption.index.map(total_companies_per_sector)
+
+    # Create figure with larger size for better readability
+    plt.figure(figsize=(18, 12), facecolor='#f0f8ff')
+    ax = plt.gca()
+    ax.set_facecolor('#e6f0fa')
+
+    # Create stacked bar plot - order: ESRS, SASB, GRI, AA1000
+    x = np.arange(len(ateco_adoption))
+    bottom = np.zeros(len(ateco_adoption))
+
+    # Define distinct colors for each framework
+    colors = ['#2E86AB', '#A23B72', '#4CAF50', '#FF9800']  # ESRS, SASB, GRI, AA1000
+
+    # ESRS bar
+    bars1 = plt.bar(x, ateco_adoption['ESRS_2023_flag'].values, color=colors[0],
+                    edgecolor='white', linewidth=0.5, label='ESRS', alpha=0.9)
+    bottom += ateco_adoption['ESRS_2023_flag'].values
+
+    # SASB bar
+    bars2 = plt.bar(x, ateco_adoption['SASB_2023_flag'].values, bottom=bottom, color=colors[1],
+                    edgecolor='white', linewidth=0.5, label='SASB', alpha=0.9)
+    bottom += ateco_adoption['SASB_2023_flag'].values
+
+    # GRI bar
+    bars3 = plt.bar(x, ateco_adoption['GRI_2023_flag'].values, bottom=bottom, color=colors[2],
+                    edgecolor='white', linewidth=0.5, label='GRI', alpha=0.9)
+    bottom += ateco_adoption['GRI_2023_flag'].values
+
+    # AA1000 bar
+    bars4 = plt.bar(x, ateco_adoption['AA1000_2023_flag'].values, bottom=bottom, color=colors[3],
+                    edgecolor='white', linewidth=0.5, label='AA1000', alpha=0.9)
+
+    # Customize the plot
+    plt.xlabel('ATECO Sector', fontsize=14, fontweight='bold')
+    plt.ylabel('Number of standard adoptions', fontsize=14, fontweight='bold')
+    plt.ylim(0, 70)
+
+    # Keep only sector letter and company count
+    x_tick_labels = []
+    for idx in ateco_adoption.index:
+        total_in_sector = ateco_adoption.loc[idx, 'Total_Companies']
+        x_tick_labels.append(f'{idx}\nn={total_in_sector}')
+
+    plt.xticks(x, x_tick_labels, fontsize=11, rotation=45, ha='right')
+    plt.yticks(fontsize=12)
+
+    # Add total value labels on top of each complete bar
+    for i, (idx, row) in enumerate(ateco_adoption.iterrows()):
+        total = row['Total']
+        if total > 0:
+            # Total number on top of each complete bar
+            y_offset = max(ateco_adoption['Total']) * 0.01  # Smaller offset
+            ax.text(i, total + y_offset, f'{int(total)}', ha='center', va='bottom',
+                    fontsize=13, fontweight='bold', color='black')
+
+    # FIXED: Add sub-bar labels correctly - using the actual values from each segment
+    # Convert Series to numpy arrays for integer indexing
+    esrs_values = ateco_adoption['ESRS_2023_flag'].values
+    sasb_values = ateco_adoption['SASB_2023_flag'].values
+    gri_values = ateco_adoption['GRI_2023_flag'].values
+    aa1000_values = ateco_adoption['AA1000_2023_flag'].values
+
+    # Calculate cumulative sums for positioning
+    cum_bottom = np.zeros(len(ateco_adoption))
+
+    # Add labels for ESRS segments
+    for i, value in enumerate(esrs_values):
+        if value > 0:
+            # Position at 90% height of this segment
+            y_pos = cum_bottom[i] + (value * 0.9)
+            ax.text(i, y_pos, f'{int(value)}', ha='center', va='center',
+                    fontsize=9, fontweight='bold', color='black')
+    cum_bottom += esrs_values
+
+    # Add labels for SASB segments
+    for i, value in enumerate(sasb_values):
+        if value > 0:
+            # Position at 90% height of this segment
+            y_pos = cum_bottom[i] + (value * 0.9)
+            ax.text(i, y_pos, f'{int(value)}', ha='center', va='center',
+                    fontsize=9, fontweight='bold', color='black')
+    cum_bottom += sasb_values
+
+    # Add labels for GRI segments
+    for i, value in enumerate(gri_values):
+        if value > 0:
+            # Position at 90% height of this segment
+            y_pos = cum_bottom[i] + (value * 0.9)
+            ax.text(i, y_pos, f'{int(value)}', ha='center', va='center',
+                    fontsize=9, fontweight='bold', color='black')
+    cum_bottom += gri_values
+
+    # Add labels for AA1000 segments
+    for i, value in enumerate(aa1000_values):
+        if value > 0:
+            # Position at 90% height of this segment
+            y_pos = cum_bottom[i] + (value * 0.9)
+            ax.text(i, y_pos, f'{int(value)}', ha='center', va='center',
+                    fontsize=9, fontweight='bold', color='black')
+
+    # Create custom legend with note about n
+    from matplotlib.patches import Patch
+
+    # Create legend elements
+    legend_elements = [
+        Patch(facecolor=colors[0], label='ESRS'),
+        Patch(facecolor=colors[1], label='SASB'),
+        Patch(facecolor=colors[2], label='GRI'),
+        Patch(facecolor=colors[3], label='AA1000')
+    ]
+
+    # Create legend with title
+    legend = ax.legend(handles=legend_elements, title='Frameworks',
+                       title_fontsize=13, fontsize=12,
+                       loc='upper right', framealpha=0.95, edgecolor='gray')
+
+    # Add note below legend
+    ax.text(0.98, 0.82, '(n = total companies in sector)', transform=ax.transAxes,
+            fontsize=10, ha='right', va='bottom', color='gray', style='italic')
+
+    # Add a subtle grid and fancy border
+    plt.grid(True, which='both', linestyle='--', alpha=0.3, linewidth=0.5, axis='y')
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    ax.set_axisbelow(True)
+
+    # Add horizontal lines for better readability
+    ax.yaxis.grid(True, linestyle='--', alpha=0.3)
+
+    # Add a title
+    plt.title('Framework Adoption by ATECO Sector (2023)',
+              fontsize=16, fontweight='bold', pad=20)
+
+    # Adjust layout
+    plt.tight_layout()
+
+    # Show and save the plot
+    plt.savefig('extra_image_1_2023.png', dpi=300, bbox_inches='tight')
+
+    return ateco_adoption
+
+def pie_chart_2023_2024_horizontal(df):
+    """
+    Create a 2x3 grid of pie charts for 2023-2024 (years as rows, standards as columns)
+    No title on the overall figure
+    """
+    # Create a 2x3 (2 years × 3 standards) grid of subplots
+    fig, axes = plt.subplots(2, 3, figsize=(15, 8))
+
+    # Defining standards and years (only 2023 and 2024)
+    standards = ['GRI', 'ESRS', 'SASB']
+    years = [2023, 2024]
+
+    # Iterate through years (rows) and standards (columns)
+    for i, year in enumerate(years):
+        for j, standard in enumerate(standards):
+            # Get the data for this year and standard
+            df_column_name = f'{standard}_{year}'
+            value_counts = df[df_column_name].value_counts(normalize=True)
+
+            # Create pie chart in the appropriate subplot
+            axes[i, j].pie(value_counts.values,
+                           labels=['Not adopted', 'Adopted'],
+                           autopct='%1.1f%%',
+                           startangle=90,
+                           colors=['lightcoral', 'lightgreen'])
+
+            # Set titles for each subplot: Year as row label, Standard as column label
+            if i == 0:  # First row (2023)
+                axes[i, j].set_title(f'{standard}', fontweight='bold', pad=10)
+            else:  # Second row (2024)
+                axes[i, j].set_xlabel(f'{standard}', fontweight='bold', labelpad=10)
+
+    # Add year labels on the y-axis (left side)
+    for i, year in enumerate(years):
+        axes[i, 0].set_ylabel(f'{year}', fontweight='bold', fontsize=12, labelpad=20, rotation=90)
+
+    # Adjust layout to prevent overlapping
+    plt.tight_layout()
+
+    # Save the figure without a title
+    plt.savefig('Pie_Charts_2023_2024_Horizontal.png', dpi=300, bbox_inches='tight')
+
+def pie_chart_2023_2024_horizontal_with_AA1000(df, extra_df):
+    """
+    Create a 2x4 grid of pie charts comparing adoption of sustainability standards.
+
+    Parameters:
+    tidier_df (pd.DataFrame): Main dataset with GRI, ESRS, SASB columns
+    extra_df (pd.DataFrame): Additional dataset with AA1000 columns
+    Returns:
+    matplotlib.figure.Figure: The created figure
+    """
+
+    # Extract AA1000 columns from extra dataset
+    aa1000_columns = ['Name', 'AA1000_2023', 'AA1000_2024']
+
+    if not all(col in extra_df.columns for col in aa1000_columns):
+        raise ValueError("Extra dataset must contain 'Name', 'AA1000_2023', and 'AA1000_2024' columns")
+
+    # Merge datasets internally (not returned)
+    aa1000_data = extra_df[aa1000_columns]
+    merged_df = pd.merge(df, aa1000_data, on='Name', how='left')
+    merged_df['AA1000_2023'] = merged_df['AA1000_2023'].fillna(0).astype(int)
+    merged_df['AA1000_2024'] = merged_df['AA1000_2024'].fillna(0).astype(int)
+
+    # Create figure with 2x4 grid - adjust height for better aspect ratio
+    fig, axes = plt.subplots(2, 4, figsize=(16, 7))  # Reduced height from 9 to 7
+
+    # Standards and years
+    standards = ['GRI', 'ESRS', 'SASB', 'AA1000']
+    years = [2023, 2024]
+
+    # Colors and labels
+    colors = ['#FF6B6B', '#4ECDC4']
+    labels = ['Not adopted', 'Adopted']
+
+    # Create pie charts
+    for row_idx, year in enumerate(years):
+        for col_idx, standard in enumerate(standards):
+            column_name = f'{standard}_{year}'
+            ax = axes[row_idx, col_idx]
+
+            if column_name not in merged_df.columns:
+                ax.text(0.5, 0.5, f'{standard}_{year}\nnot found',
+                       ha='center', va='center', fontsize=12)
+                ax.set_title(f'{standard} {year}', fontweight='bold', fontsize=11, pad=3)  # Reduced pad
+                continue
+
+            # Calculate percentages
+            value_counts = merged_df[column_name].value_counts(normalize=True)
+
+            # Create pie chart
+            wedges, texts, autotexts = ax.pie(
+                value_counts.values,
+                labels=['', ''],  # No labels on individual charts
+                autopct='%1.1f%%',
+                startangle=90,
+                colors=colors,
+                textprops={'fontsize': 9}
+            )
+
+            # Make autopct text bold
+            for autotext in autotexts:
+                autotext.set_fontweight('bold')
+
+            # Set title - brought closer to pie chart
+            ax.set_title(f'{standard} {year}', fontweight='bold', fontsize=11, pad=3)
+
+    # Create a custom legend for the entire figure
+    legend_labels = ['Not adopted', 'Adopted']
+    legend_colors = colors
+
+    # Create legend patches
+    import matplotlib.patches as mpatches
+    legend_patches = [
+        mpatches.Patch(color=legend_colors[i], label=legend_labels[i])
+        for i in range(len(legend_labels))
+    ]
+
+    # Add legend outside the figure at the bottom center
+    # Position: bottom center, below the subplots
+    fig.legend(handles=legend_patches,
+               labels=legend_labels,
+               loc='lower center',
+               ncol=2,
+               fontsize=11,
+               frameon=True,
+               framealpha=0.9,
+               edgecolor='gray',
+               borderpad=1,
+               labelspacing=1,
+               handlelength=1.5,
+               handleheight=1.5)
+
+    # Adjust layout - reduced bottom space for legend and increased space between rows
+    plt.subplots_adjust(
+        hspace=0.25,  # Reduced vertical space between rows (was ~0.3-0.4)
+        wspace=0.2,   # Horizontal space between columns
+        top=0.92,     # Reduced top margin
+        bottom=0.15   # Increased bottom margin for legend
+    )
+
+    # Save the figure using the figure object
+    fig.savefig('pie_chart_2023_2024_horizontal_with_AA1000.png', dpi=300, bbox_inches='tight')
+
+    # Return the figure
+    return fig
+
 def figure4_1(df):
     # Set professional style
     plt.style.use('seaborn-v0_8-whitegrid')
@@ -1755,16 +2278,9 @@ df = pd.read_csv(path)
 #ACTUAL CODE
 path = "Tidier_Dataset.csv"
 df = pd.read_csv(path)
-
-figure1(df)
-figure1_1(df)
-figure2(df)
-figure2_1(df)
-figure3(df)
-figure4(df)
-figure5(df)
-
-create_gri_to_esrs_sasb_analysis(df)
+extra_df = pd.read_csv("Extra Dataset.csv")
+figure2_2(df, extra_df)
+figure2_3(df, extra_df)
 
 # DEBUG
 
