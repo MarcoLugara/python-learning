@@ -899,8 +899,6 @@ def create_2024_grouped_bar_chart():
             group_counts = {}
 
             # Red Group (Fields 1-8): Companies with at least one field completed
-            # We need to count companies that have sum > 0 in Red_Group_sum_2024
-            # But from our detailed_breakdown, we have counts by value. We need to sum all counts > 0
             red_count = 0
             for value in range(1, 9):  # 1 to 8
                 count = sector_row.iloc[0].get(f'Red_Group_{value}', 0)
@@ -938,25 +936,17 @@ def create_2024_grouped_bar_chart():
         'Blue_Group': '#4d96ff',  # Blue
         'Green_Group': '#6bcf7f'  # Green
     }
-    # CHANGED: Updated group names (removed F1-F8 etc.)
+
     group_names = {
         'Red_Group': 'Collaborative',
         'Blue_Group': 'Consultative',
         'Green_Group': 'Informative'
     }
 
-    # Calculate total for each sector (sum of all groups)
-    # Note: A company might be counted in multiple groups if they have fields in multiple groups
-    # So total is not just the sum of the three groups (that would double count)
-    # Instead, we need to calculate unique companies with at least one field in ANY group
-    # We'll calculate this from the original dataframe
-
     # Calculate unique companies per sector with at least one field completed
     unique_counts = {}
     for sector in sorted_sector_names:
-        # Get sector data from original df for 2024
         sector_data = df[df['ateco_letter'] == sector]
-        # Count companies with at least one field completed in 2024
         companies_with_any = len(sector_data[sector_data[f'total_sum_{year}'] > 0])
         unique_counts[sector] = companies_with_any
 
@@ -989,7 +979,6 @@ def create_2024_grouped_bar_chart():
     ax.set_title(f'{year} - Companies with Completed Fields by Group and ATECO Sector',
                  fontsize=16, fontweight='bold', pad=20)
     ax.set_xlabel('ATECO Sector', fontsize=12)
-    # CHANGED: Updated y-axis label
     ax.set_ylabel('Stakeholder engagement', fontsize=12)
 
     # Set x-ticks at sector positions (not group positions)
@@ -1010,15 +999,8 @@ def create_2024_grouped_bar_chart():
                         f'{int(count)}', ha='center', va='bottom',
                         fontsize=8, fontweight='bold')
 
-    # Calculate maximum bar height to set y-axis limit
-    max_bar_height = 0
-    for sector in sorted_sector_names:
-        for group in group_order:
-            count = sector_group_counts.get(sector, {}).get(group, 0)
-            max_bar_height = max(max_bar_height, count)
-
-    # ADDED: Set y-axis limit to 50 (as requested)
-    ax.set_ylim(top=50)
+    # Set y-axis limit to 45
+    ax.set_ylim(top=45)
 
     # Add total unique companies label at the top of each sector group
     for i, sector in enumerate(sorted_sector_names):
@@ -1030,8 +1012,9 @@ def create_2024_grouped_bar_chart():
             max_height = max(max_height, count)
 
         if max_height > 0:
-            # CHANGED: Changed color to black
-            ax.text(x_positions[i], max_height + (ax.get_ylim()[1] * 0.03),
+            # Increased offset for better visibility
+            total_label_y = max_height + (ax.get_ylim()[1] * 0.07)  # Increased from 0.05 to 0.07
+            ax.text(x_positions[i], total_label_y,
                     f'Total: {total_unique}', ha='center', va='bottom',
                     fontsize=10, fontweight='bold', color='black')
 
@@ -1046,17 +1029,237 @@ def create_2024_grouped_bar_chart():
         ax.text(x_positions[i], n_label_y, f'n={total_companies}',
                 ha='center', va='top', fontsize=9, color='gray', fontweight='bold')
 
-    # Add legend with updated title
-    # CHANGED: Updated legend title
-    ax.legend(title='Stakeholder engagement metric', title_fontsize=11, fontsize=10,
-              loc='upper right', frameon=True, fancybox=True, shadow=True)
+    # Add legend in top right inside the chart
+    legend = ax.legend(title='Stakeholder engagement metric', title_fontsize=11, fontsize=10,
+                       loc='upper right', frameon=True, fancybox=True, shadow=True,
+                       bbox_to_anchor=(0.95, 0.95))  # Slightly inside from the top-right corner
 
-    # Add a note about what the chart shows
-    note_text = ("n = number of companies.")
-    plt.figtext(0.02, 0.02, note_text, fontsize=9, color='gray',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightyellow', alpha=0.8))
+    # Draw the canvas to get the legend's position
+    fig.canvas.draw()
+
+    # Get the legend's bounding box in figure coordinates
+    legend_bbox = legend.get_window_extent().transformed(fig.transFigure.inverted())
+
+    # Calculate position for textbox right below the legend
+    # Center the textbox horizontally with the legend
+    note_x = (legend_bbox.x0 + legend_bbox.x1) / 2
+    # Position it just below the legend
+    note_y = legend_bbox.y0 - 0.02
+
+    # Add textbox with note
+    note_text = "n = number of companies"
+    ax.text(note_x, note_y, note_text, fontsize=9, color='gray',
+            bbox=dict(boxstyle='round,pad=0.5', facecolor='lightyellow', alpha=0.8),
+            ha='center', va='top', transform=fig.transFigure)
 
     return fig, sorted_sector_names
+
+
+# Execute the function and save the figure
+print("Creating 2024 grouped bar chart...")
+fig_2024, sorted_sectors_2024 = create_2024_grouped_bar_chart()
+image_path = 'Image_2024_Grouped_Bars.png'
+# Save with reasonable settings
+plt.savefig(image_path, dpi=150, bbox_inches='tight')
+plt.close()
+print(f"✓ Created {image_path}")
+
+
+def create_2023_grouped_bar_chart():
+    """Create a bar graph for 2023 showing ATECO sectors with bars divided by field groups."""
+
+    # Filter data for 2023
+    year = '2023'
+    year_data = detailed_breakdown[detailed_breakdown['year'] == year]
+
+    # Create figure
+    fig, ax = plt.subplots(figsize=(14, 8))
+
+    # Set up better spacing
+    plt.subplots_adjust(left=0.08, right=0.95, bottom=0.15, top=0.9)
+
+    # Calculate counts for each sector and group
+    sector_group_counts = {}
+    sector_totals = {}
+
+    # Get unique sectors
+    unique_sectors = sorted(year_data['ateco_letter'].unique())
+
+    for sector in unique_sectors:
+        sector_row = year_data[year_data['ateco_letter'] == sector]
+        if not sector_row.empty:
+            total_companies = sector_row.iloc[0]['total_companies']
+            sector_totals[sector] = total_companies
+
+            # Calculate counts for each group
+            group_counts = {}
+
+            # Red Group (Fields 1-8): Companies with at least one field completed
+            red_count = 0
+            for value in range(1, 9):  # 1 to 8
+                count = sector_row.iloc[0].get(f'Red_Group_{value}', 0)
+                red_count += count
+            group_counts['Red_Group'] = red_count
+
+            # Blue Group (Fields 9-13)
+            blue_count = 0
+            for value in range(1, 6):  # 1 to 5 (since max_fields = 5)
+                count = sector_row.iloc[0].get(f'Blue_Group_{value}', 0)
+                blue_count += count
+            group_counts['Blue_Group'] = blue_count
+
+            # Green Group (Fields 14-16)
+            green_count = 0
+            for value in range(1, 4):  # 1 to 3 (since max_fields = 3)
+                count = sector_row.iloc[0].get(f'Green_Group_{value}', 0)
+                green_count += count
+            group_counts['Green_Group'] = green_count
+
+            sector_group_counts[sector] = group_counts
+
+    # Sort sectors by total companies (descending)
+    sorted_sectors = sorted(sector_totals.items(), key=lambda x: x[1], reverse=True)
+    sorted_sector_names = [sector for sector, _ in sorted_sectors]
+
+    # Set up bar positions
+    x_positions = np.arange(len(sorted_sector_names))
+    bar_width = 0.6
+
+    # Define group colors and order
+    group_order = ['Red_Group', 'Blue_Group', 'Green_Group']
+    group_colors_map = {
+        'Red_Group': '#ff9800',  # Orange/amber
+        'Blue_Group': '#4d96ff',  # Blue
+        'Green_Group': '#6bcf7f'  # Green
+    }
+
+    group_names = {
+        'Red_Group': 'Collaborative',
+        'Blue_Group': 'Consultative',
+        'Green_Group': 'Informative'
+    }
+
+    # Calculate unique companies per sector with at least one field completed
+    unique_counts = {}
+    for sector in sorted_sector_names:
+        sector_data = df[df['ateco_letter'] == sector]
+        companies_with_any = len(sector_data[sector_data[f'total_sum_{year}'] > 0])
+        unique_counts[sector] = companies_with_any
+
+    # Create grouped bars
+    group_positions = {}
+    bar_offset = bar_width / 3
+
+    for i, group in enumerate(group_order):
+        # Position for this group's bars
+        if group == 'Red_Group':
+            x_offset = -bar_offset
+        elif group == 'Green_Group':
+            x_offset = bar_offset
+        else:  # Blue_Group (middle)
+            x_offset = 0
+
+        group_positions[group] = x_positions + x_offset
+
+        # Get counts for this group across all sectors
+        counts = []
+        for sector in sorted_sector_names:
+            counts.append(sector_group_counts.get(sector, {}).get(group, 0))
+
+        # Create bars for this group
+        ax.bar(group_positions[group], counts, width=bar_offset * 0.8,
+               color=group_colors_map[group], alpha=0.8, edgecolor='black',
+               linewidth=0.5, label=group_names[group])
+
+    # Customize the plot
+    ax.set_title(f'{year} - Companies with Completed Fields by Group and ATECO Sector',
+                 fontsize=16, fontweight='bold', pad=20)
+    ax.set_xlabel('ATECO Sector', fontsize=12)
+    ax.set_ylabel('Stakeholder engagement', fontsize=12)
+
+    # Set x-ticks at sector positions (not group positions)
+    ax.set_xticks(x_positions)
+    ax.set_xticklabels(sorted_sector_names, rotation=45, ha='right', fontsize=11)
+
+    # Add grid
+    ax.grid(axis='y', alpha=0.3, linestyle='--')
+
+    # Add value labels on top of each bar
+    for group in group_order:
+        x_group = group_positions[group]
+        for i, sector in enumerate(sorted_sector_names):
+            count = sector_group_counts.get(sector, {}).get(group, 0)
+            if count > 0:
+                # Position the label slightly above the bar
+                ax.text(x_group[i], count + (ax.get_ylim()[1] * 0.01),
+                        f'{int(count)}', ha='center', va='bottom',
+                        fontsize=8, fontweight='bold')
+
+    # CHANGED: Set y-axis limit to 55 instead of 45
+    ax.set_ylim(top=55)
+
+    # Add total unique companies label at the top of each sector group
+    for i, sector in enumerate(sorted_sector_names):
+        total_unique = unique_counts.get(sector, 0)
+        # Position above the highest bar in this sector group
+        max_height = 0
+        for group in group_order:
+            count = sector_group_counts.get(sector, {}).get(group, 0)
+            max_height = max(max_height, count)
+
+        if max_height > 0:
+            # CHANGED: Using the new y-axis limit of 55 for positioning
+            total_label_y = max_height + (ax.get_ylim()[1] * 0.07)
+            ax.text(x_positions[i], total_label_y,
+                    f'Total: {total_unique}', ha='center', va='bottom',
+                    fontsize=10, fontweight='bold', color='black')
+
+    # Add 'n' labels at the bottom (total companies in sector)
+    y_min, y_max = ax.get_ylim()  # Now y_max should be 55
+    offset = y_max * 0.08
+    ax.set_ylim(bottom=y_min - offset)
+
+    n_label_y = y_min - offset * 0.4
+    for i, sector in enumerate(sorted_sector_names):
+        total_companies = sector_totals.get(sector, 0)
+        ax.text(x_positions[i], n_label_y, f'n={total_companies}',
+                ha='center', va='top', fontsize=9, color='gray', fontweight='bold')
+
+    # Add legend in top right inside the chart
+    legend = ax.legend(title='Stakeholder engagement metric', title_fontsize=11, fontsize=10,
+                       loc='upper right', frameon=True, fancybox=True, shadow=True,
+                       bbox_to_anchor=(0.95, 0.95))  # Slightly inside from the top-right corner
+
+    # Draw the canvas to get the legend's position
+    fig.canvas.draw()
+
+    # Get the legend's bounding box in figure coordinates
+    legend_bbox = legend.get_window_extent().transformed(fig.transFigure.inverted())
+
+    # Calculate position for textbox right below the legend
+    # Center the textbox horizontally with the legend
+    note_x = (legend_bbox.x0 + legend_bbox.x1) / 2
+    # Position it just below the legend
+    note_y = legend_bbox.y0 - 0.02
+
+    # Add textbox with note
+    note_text = "n = number of companies"
+    ax.text(note_x, note_y, note_text, fontsize=9, color='gray',
+            bbox=dict(boxstyle='round,pad=0.5', facecolor='lightyellow', alpha=0.8),
+            ha='center', va='top', transform=fig.transFigure)
+
+    return fig, sorted_sector_names
+
+
+# Execute the function and save the figure
+print("Creating 2023 grouped bar chart...")
+fig_2023, sorted_sectors_2023 = create_2023_grouped_bar_chart()
+image_path = 'Image_2023_Grouped_Bars.png'
+# Save with reasonable settings
+plt.savefig(image_path, dpi=150, bbox_inches='tight')
+plt.close()
+print(f"✓ Created {image_path}")
+
 
 def create_pdf_report():
     # Import colors locally to avoid conflicts
@@ -1622,9 +1825,9 @@ if 'trend_stats' in advanced_stats:
     print(f"  4. Data mapping from original column names to Field1-Field16 structure")
 """
 
-# Create and save the chart
+"""# Create and save the chart
 print("Creating 2024 grouped bar chart...")
 fig_2024, sorted_sectors_2024 = create_2024_grouped_bar_chart()
 image_path = 'Image_2024_Grouped_Bars.png'
-plt.savefig(image_path, dpi=300, bbox_inches='tight')
-print(f"✓ Created {image_path}")
+plt.savefig(image_path, dpi=300, bbox_inches=None)
+print(f"✓ Created {image_path}")"""
