@@ -1,8 +1,6 @@
 # level1_bot.py
-from langchain_core.prompts import PromptTemplate
-from langchain_ollama import OllamaLLM
-from langchain_core.output_parsers import JsonOutputParser
-from pydantic import BaseModel, Field
+import openai
+import re
 
 openai.api_key = "HARDCODED_KEY"
 
