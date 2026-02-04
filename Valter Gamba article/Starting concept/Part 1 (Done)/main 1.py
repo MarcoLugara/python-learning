@@ -85,14 +85,13 @@ def reshape_database(df1):
 #3x3 table of piecharts for each distribution
 def pie_chart_per_year_per_standard_index(df):
     # Create a 3x3 (3 years × 3 standards)  grid of subplots (piecharts)
-    pieplots, axes = plt.subplots(3, 3, figsize=(13, 9))
+    pieplots, axes = plt.subplots(3, 2, figsize=(12, 8))
     # where pieplots is the name of the figure
     #   and axes creates a 3x3 ixj empty array to the later fill
-    pieplots.suptitle('INSERIRE TITOLO ADEGUATO (2022-2024)', fontsize=16, fontweight='bold')
 
     # Creating the columns of the standards per year more effeciently
     standards = ['GRI', 'ESRS', 'SASB']
-    years = [2022, 2023, 2024]
+    years = [2023, 2024]
 
     # Iterate through years (rows) and standards (columns)
     for i, standard in enumerate(standards):
@@ -111,7 +110,7 @@ def pie_chart_per_year_per_standard_index(df):
             axes[i, j].set_title(f'{standard} {year}', fontweight='bold')
 
     plt.tight_layout()  # Prevents overlapping
-    plt.savefig('INSERIRE TITOLO ADEGUATO (2022-2024).png')
+    plt.savefig('INSERIRE TITOLO ADEGUATO (2023-2024).png')
     ##plt.show()
 
 #Check of all 0s and all 1s and check of who did ESRS or SASB in 2024

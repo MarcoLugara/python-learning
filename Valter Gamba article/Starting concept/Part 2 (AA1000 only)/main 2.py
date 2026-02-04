@@ -17,7 +17,7 @@ def comprehensive_database_reshaping(original_csv_path, ateco_codes_csv_path, ou
 
     Parameters:
     - original_csv_path: Path to 'Database Ufficiale.csv'
-    - ateco_codes_csv_path: Path to 'ATECO_codes.csv'
+    - ateco_codes_csv_path: Path to 'ATECLO_codes.csv'
     - output_csv_path: Path to save the final CSV (default: 'Starting_Dataset.csv.csv')
     - output_excel_path: Path to save the final Excel (default: 'Tidier_Dataset.xlsx')
 
