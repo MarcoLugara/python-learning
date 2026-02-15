@@ -138,7 +138,7 @@ model = OllamaLLM(model="phi3:mini", temperature=0)
 
 print("✓ Model initialized:")
 print("  - Model: phi3:mini (lightweight, 3.8B parameters)")
-print("  - Temperature: 0.3 (focused, consistent output)")
+print("  - Temperature: 0 (focused, consistent output)")
 print("  - Make sure Ollama is running (run 'ollama serve' in terminal)")
 print()
 

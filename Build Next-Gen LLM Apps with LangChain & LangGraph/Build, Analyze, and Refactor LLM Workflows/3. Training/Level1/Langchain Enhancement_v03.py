@@ -1,6 +1,5 @@
 # =============================================================================
-# Version Updates: This version implements progressive fallback
-#   in the invoke part and time check for the model invoke
+# Version Updates: Added seed determinism and few-shpt + evaluation dataset concepts
 # =============================================================================
 
 from langchain_core.prompts import PromptTemplate
@@ -34,7 +33,7 @@ intent_parser = JsonOutputParser(pydantic_object=IntentOnly)
 
 class IntentSummary(BaseModel):
     summary_of_the_text: str = Field(
-        description="Quick summary of the text. No more than 3 lines in a generic PDF extract. Be concise and formal.")
+        description="Quick summary of the text. No more than 3 lines. Be concise and formal.")
     intent: Literal["billing", "tech_support", "sales", "none"] = Field(
         description="Area of interest between billing, tech support, sales or none of them. Only one of those three words."
     )
@@ -49,7 +48,9 @@ class IntentSummaryExplain(BaseModel):
     intent: Literal["billing", "tech_support", "sales", "none"] = Field(
         description="Area of interest between billing, tech support, sales or none of them. Only one of those three words."
     )
-    justification_of_choice: str = Field(description="Justify your intent choice.")
+    justification_of_choice: str = Field(
+        description="Justify your intent choice."
+    )
 
 
 intent_summary_explain_parser = JsonOutputParser(pydantic_object=IntentSummaryExplain)
@@ -132,11 +133,18 @@ print("STEP 3: Initializing Ollama Model")
 print("=" * 60)
 
 # Initialize the model - CHANGED to use OllamaLLM
-model = OllamaLLM(model="phi3:mini", temperature=0)
+model = OllamaLLM(model="phi3:mini", temperature=0, seed=42)
+# The choice of seed 42 (in general any number >0) gives determinism to the output, enhancing reproducibility.
+#   The choice of why exactly 42 has no mathematical meaning, but is a convention due to a reference to
+#   "The Hitchhiker's Guide to the Galaxy" ("the answer to life, the universe and everything") and is usually
+#   globally recognized as a way to study deterministic outputs. Changing the model would make the seed choice
+#   meaningless: choosing 42 on phi3:mini gives different outputs compared to choosing 42 on any other model, i.e. Mistal one.
+#   In one sentence: Seeds are not portable across model weights.
 
 print("✓ Model initialized:")
 print("  - Model: phi3:mini (lightweight, 3.8B parameters)")
 print("  - Temperature: 0.3 (focused, consistent output)")
+print("  - Seed: 0 gives specific determinism for THAT specific model")
 print("  - Make sure Ollama is running (run 'ollama serve' in terminal)")
 print()
 
@@ -155,6 +163,41 @@ intent_summary_explain_chain = intent_summary_explain_prompt | model | intent_su
 print("✓ Chains created!")
 print("  Components connected: Prompts → Ollama Model → Parsers")
 print()
+
+# =============================================================================
+# STEP 5: We define the Evaluation set, to check on the model accuracy and run a test
+# =============================================================================
+
+EVAL_DATASET = [
+    {"text": "My invoice shows a charge I don't recognize.",  "expected_intent": "billing"},
+    {"text": "My internet connection keeps dropping every few hours.", "expected_intent": "tech_support"},
+    {"text": "I'm interested in upgrading to a business package.", "expected_intent": "sales"},
+    {"text": "The green bond market has grown rapidly...",          "expected_intent": "none"},
+    {"text": "I was overcharged for the premium tier last cycle.",  "expected_intent": "billing"},
+    {"text": "How do I reset my router to factory settings?",      "expected_intent": "tech_support"},
+]
+
+def evaluate_chain(chain, dataset):
+    correct: int = 0
+    total = len(dataset)
+
+    for item in dataset:
+        result    = chain.invoke({"text": item["text"]})
+        predicted = result.get("intent")
+        expected  = item["expected_intent"]
+
+        is_correct = predicted == expected
+        correct   += is_correct
+
+        status = "✔" if is_correct else "✖"
+        print(f"{status}  Expected: {expected:12} | Got: {predicted}")
+
+    accuracy = correct / total * 100
+    print(f"\nAccuracy: {correct}/{total} = {accuracy:.1f}%")
+    return accuracy
+
+#We then run the evaluate chain
+evaluate_chain(intent_only_chain, EVAL_DATASET)
 
 # =============================================================================
 # STEP 5: Prepare Sample Text (Test prompt)
