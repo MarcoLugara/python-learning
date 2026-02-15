@@ -133,8 +133,6 @@ print("=" * 60)
 
 # Initialize the model - CHANGED to use OllamaLLM
 model = OllamaLLM(model="phi3:mini", temperature=0)
-#Temperature = 0 is optimal because our task is classification, which has nothing to
-#   be artistic about (therefore temperature \in [0,1] has to be closest to 0
 
 print("✓ Model initialized:")
 print("  - Model: phi3:mini (lightweight, 3.8B parameters)")
@@ -179,7 +177,7 @@ print(sample_text.strip())
 print()
 
 # =============================================================================
-# STEP 6: Run the Chain, has invoke enhancements
+# STEP 6: We run the Chain
 # =============================================================================
 print("=" * 60)
 print("STEP 6: Running the Chain")
@@ -192,32 +190,6 @@ print("We start by the sole are of interest, into summary and area of interest, 
       "into summary area of interest and explanation of the choice")
 
 # try-except allows to debug and study hallucinations or errors
-
-"""
-=============================================================================
- OLD SOLUTION
-=============================================================================
-#We build a safe invoke that check if the model fails eventually
-
-def safe_invoke(chain, text, retries=2):
-    for attempt in range(retries):
-        try:
-            return chain.invoke({"text": text})
-        except Exception as e:
-            print(f"Retry {attempt+1} failed:", e)
-
-    return {"error": "Model failed after retries"}
-
-#Now we do the three separates invokes
-#Area of interest only
-intent_result = safe_invoke(intent_only_chain, sample_text)
-
-#Then, summary and area of interest
-intent_summary_result = safe_invoke(intent_summary_chain, sample_text)
-
-#Last, all three together
-intent_summary_explain_result = safe_invoke(intent_summary_explain_chain, sample_text)
-"""
 
 
 # =============================================================================
@@ -243,26 +215,8 @@ def progressive_intent_analysis(text):
     return {"error": "All fallback chains failed"}
 
 
-"""
-#=============================================================================
-# OLD EXECUTION
-#=============================================================================
-print("=" * 60)
-print("RESULT - Structured Outputs:")
-print("=" * 60)
-print("Area of interest only result output:")
-print(json.dumps(intent_result, indent=2))
-print()
-print("Area of interest and summary result output:")
-print(json.dumps(intent_summary_result, indent=2))
-print()
-print("Area of interest, summary and explanation result output:")
-print(json.dumps(intent_summary_explain_result, indent=2))
-print()
-"""
-
 # =============================================================================
-# NEW EXECUTION: WITH FALLBACK EXECUTOR AND TIME COUNTING
+# EXECUTION WITH FALLBACK EXECUTOR AND TIME COUNTING
 # =============================================================================
 
 #We let the timer begin to analyse the response time
@@ -274,4 +228,4 @@ print(json.dumps(result, indent=2))
 
 #Finally, we check the time it took
 elapsed = time.perf_counter() - start
-print(f" \"Area of interest, summary and explanation\" chain took {elapsed:.2f}s")
+print(f" \"progressive_intent_analysis\" chain took {elapsed:.2f}s")
