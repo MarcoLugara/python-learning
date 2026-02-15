@@ -1,0 +1,58 @@
+This is the multi-script flow of my program
+
+Langchain Enhancement_v04/
+│
+├── config.py       ← constants and model instance
+├── schemas.py      ← Pydantic models and parsers
+├── prompts.py      ← PromptTemplate definitions
+├── chains.py       ← chain assembly (prompt | model | parser)
+├── evaluation.py   ← EVAL_DATASET and evaluate_chain()
+└── main.py         ← orchestrator: runs eval, then runs analysis
+
+
+Each file, its contents, and the reason for the boundary
+• config.py — the single source of truth for settings
+    Why isolate this? Because these are the values you'll change most often when experimenting —
+    swapping phi3:mini for llama3, adjusting temperature, trying a different seed. With this file,
+    you change one value in one place and every other file that imports it gets the update automatically.
+    Without it, you'd be hunting for hardcoded strings scattered across four files.
+• schemas.py — data structure definitions
+    Why isolate this? Your schemas define what data looks like — that's a separate concern from what the model does
+    with it or how prompts are structured. If you later add a fourth output class, you touch only this file.
+• prompts.py — prompt construction
+    Notice the import line: from schemas import intent_parser, .... This file depends on schemas.py.
+    That dependency is explicit and visible at the top of the file — which is the point.
+• chains.py — assembly only
+    This file does exactly one thing: wire components together into chains. It doesn't define what a chain does,
+    it doesn't define what the model is — it only connects pieces that are defined elsewhere.
+• evaluation.py — evaluation logic
+• main.py — the orchestrator, nothing else
+    One thing you haven't seen before: `if __name__ == "__main__"`
+    This guard appears in `main.py` and you'll see it everywhere. Here's what it does.
+    When Python imports a file, it executes it. That means if `main.py` had `progressive_intent_analysis(sample_text)`
+        at the top level with no guard, importing it from another script would **immediately run your analysis** —
+        which you never wanted.
+    `__name__` is a built-in variable Python sets automatically.
+    When a file is run directly (`python main.py`), `__name__` equals `"__main__"`. When a file is imported by another file,
+        `__name__` equals the filename instead. The guard means: *only run this block if this file is the entry point,
+        not if it's being imported*.
+    Every file that has execution logic at the bottom should have this guard.
+    Your other files (`schemas.py`, `config.py`, etc.) don't need it because they only define things —
+        they don't execute anything when imported.
+
+
+One last thing to internalise. Read the imports in each file and you get a strict hierarchy — data flows in one direction only:
+
+config.py       ← no dependencies
+schemas.py      ← no dependencies
+    ↑
+prompts.py      ← depends on schemas
+    ↑
+chains.py       ← depends on config, schemas, prompts
+    ↑
+evaluation.py   ← depends on config
+    ↑
+main.py         ← depends on chains, evaluation
+
+Nothing in this diagram points backward. config.py does not import from main.py. schemas.py does not know that chains exist.
+This one-directional flow is what makes the architecture maintainable — you can read, modify, or test any layer without understanding everything above it.
