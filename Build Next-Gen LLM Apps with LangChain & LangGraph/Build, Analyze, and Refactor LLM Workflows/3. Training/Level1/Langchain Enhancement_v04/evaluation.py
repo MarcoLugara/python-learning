@@ -43,7 +43,7 @@ def evaluate_chain(chains, dataset):
     return min_accuracy
 
 
-def run_evaluation(chain):
+def run_evaluation():
     attempt  = 0
     accuracy = 0.0
 
