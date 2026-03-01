@@ -15,10 +15,10 @@ def progressive_intent_analysis(text):
     for label, chain in chains:
         try:
             result = chain.invoke({"text": text})
-            print(f"✔ Success using {label} chain")
+            print(f"✔ Success using {chain.name} chain")
             return result
         except Exception as e:
-            print(f"✖ {label} chain failed: {e}")
+            print(f"✖ {chain.name} chain failed: {e}")
 
     return {"error": "All fallback chains failed"}
 
