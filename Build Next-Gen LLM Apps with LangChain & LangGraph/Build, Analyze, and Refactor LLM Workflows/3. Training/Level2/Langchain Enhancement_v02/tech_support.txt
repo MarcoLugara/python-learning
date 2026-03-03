@@ -1,0 +1,21 @@
+Technical Support Guidelines
+
+Support Hours:
+Our technical support team is available Monday through Friday, 9 AM to 6 PM EST. Enterprise customers have access to 24/7 priority support through our dedicated hotline.
+
+Common Issues:
+
+Router Connectivity:
+If your router loses connection frequently, first try a factory reset by holding the reset button for 10 seconds. Then reconfigure using the setup wizard in the admin panel at 192.168.1.1. If issues persist, check for firmware updates.
+
+Software Installation Errors:
+Installation errors are often caused by insufficient permissions. Run the installer as administrator (Windows) or with sudo (Linux/Mac). Ensure your system meets the minimum requirements: 8GB RAM, 2GB free disk space.
+
+Account Access Issues:
+For password resets, use the "Forgot Password" link on the login page. If you don't receive the reset email within 5 minutes, check your spam folder. Enterprise users should contact their IT administrator for SSO-related issues.
+
+License Activation:
+Each license key can be activated on up to 3 devices. Deactivate unused devices through your account dashboard before activating on a new device. License keys are case-sensitive.
+
+Performance Optimization:
+If the application runs slowly, clear the cache from Settings > Advanced > Clear Cache. Close unnecessary background applications. For databases over 1GB, consider enabling the performance mode in preferences.

@@ -1,0 +1,22 @@
+Billing and Payment Information
+
+Payment Methods:
+We accept Visa, Mastercard, American Express, and PayPal. Enterprise customers can also use purchase orders and bank transfers. All prices are in USD unless otherwise specified.
+
+Billing Cycles:
+Subscriptions are billed monthly or annually depending on your plan. Monthly subscriptions renew on the same day each month. Annual subscriptions offer a 20% discount compared to monthly billing.
+
+Invoice Disputes:
+If you notice an incorrect charge, contact billing@company.com within 30 days. Include your invoice number and a description of the issue. Most disputes are resolved within 5 business days.
+
+Late Payments:
+A $25 late fee is applied to accounts with payments overdue by more than 10 days. Enterprise accounts have Net-30 payment terms with no late fees if paid within the term.
+
+Refund Processing:
+Approved refunds are processed within 5-7 business days. Credit card refunds appear within 2-3 billing cycles. PayPal refunds are typically instant. Bank transfer refunds may take 7-10 business days.
+
+Tax Information:
+Sales tax is applied based on your billing address. International customers may be subject to VAT or GST. Enterprise customers can submit a tax exemption certificate to waive applicable taxes.
+
+Premium Tier Pricing:
+The premium tier is $49/month for individual accounts or $299/month for enterprise accounts with up to 50 users. Additional users are $5 each per month.
